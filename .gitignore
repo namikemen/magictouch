@@ -10,3 +10,5 @@ DerivedData/
 
 # User data
 gestures.json
+
+remove_bg.py

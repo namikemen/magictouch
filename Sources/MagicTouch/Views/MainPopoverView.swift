@@ -12,15 +12,12 @@ public struct MainPopoverView: View {
     public var body: some View {
         VStack(spacing: 0) {
             // Header Bar
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "magicmouse.fill")
-                            .imageScale(.medium)
-                            .foregroundColor(.accentColor)
-                        Text("MagicTouch")
-                            .font(.system(size: 15, weight: .bold))
-                    }
+            HStack(alignment: .center, spacing: 10) {
+                AppLogoView(size: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("MagicTouch")
+                        .font(.system(size: 15, weight: .bold))
 
                     HStack(spacing: 6) {
                         Circle()

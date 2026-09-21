@@ -84,6 +84,30 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 lipo -create "$BIN_DIR/MagicTouch_arm64" "$BIN_DIR/MagicTouch_x86_64" -output "$APP_BUNDLE/Contents/MacOS/MagicTouch"
 chmod +x "$APP_BUNDLE/Contents/MacOS/MagicTouch"
 
+# Copy App Icon & Branding Resources
+if [ -f "Resources/AppIcon.icns" ]; then
+    cp "Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+elif [ -f "logo.png" ]; then
+    echo "==> Generating AppIcon.icns from logo.png..."
+    mkdir -p .build/AppIcon.iconset
+    sips -z 16 16     logo.png --out .build/AppIcon.iconset/icon_16x16.png >/dev/null 2>&1
+    sips -z 32 32     logo.png --out .build/AppIcon.iconset/icon_16x16@2x.png >/dev/null 2>&1
+    sips -z 32 32     logo.png --out .build/AppIcon.iconset/icon_32x32.png >/dev/null 2>&1
+    sips -z 64 64     logo.png --out .build/AppIcon.iconset/icon_32x32@2x.png >/dev/null 2>&1
+    sips -z 128 128   logo.png --out .build/AppIcon.iconset/icon_128x128.png >/dev/null 2>&1
+    sips -z 256 256   logo.png --out .build/AppIcon.iconset/icon_128x128@2x.png >/dev/null 2>&1
+    sips -z 256 256   logo.png --out .build/AppIcon.iconset/icon_256x256.png >/dev/null 2>&1
+    sips -z 512 512   logo.png --out .build/AppIcon.iconset/icon_256x256@2x.png >/dev/null 2>&1
+    sips -z 512 512   logo.png --out .build/AppIcon.iconset/icon_512x512.png >/dev/null 2>&1
+    sips -z 1024 1024 logo.png --out .build/AppIcon.iconset/icon_512x512@2x.png >/dev/null 2>&1
+    iconutil -c icns .build/AppIcon.iconset -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    rm -rf .build/AppIcon.iconset
+fi
+
+if [ -f "logo.png" ]; then
+    cp "logo.png" "$APP_BUNDLE/Contents/Resources/logo.png"
+fi
+
 # Generate Info.plist
 cat <<EOF > "$APP_BUNDLE/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -94,6 +118,10 @@ cat <<EOF > "$APP_BUNDLE/Contents/Info.plist"
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>MagicTouch</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.namikemen.magictouch</string>
     <key>CFBundleInfoDictionaryVersion</key>

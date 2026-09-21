@@ -35,4 +35,6 @@ swiftc \
   Sources/MagicTouch/main.swift \
   -o "$BUILD_DIR/MagicTouch"
 
+cp -f logo.png "$BUILD_DIR/logo.png" 2>/dev/null || true
+
 echo "==> Build successful: $BUILD_DIR/MagicTouch"
