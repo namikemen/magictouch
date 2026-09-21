@@ -1,0 +1,4 @@
+module MultitouchBridge [system] {
+    header "MultitouchBridge.h"
+    export *
+}

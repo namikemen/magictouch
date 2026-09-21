@@ -1,0 +1,12 @@
+# Build & Cache Artifacts
+.build/
+.cache/
+DerivedData/
+
+# macOS system files
+.DS_Store
+*.swp
+*~
+
+# User data
+gestures.json
