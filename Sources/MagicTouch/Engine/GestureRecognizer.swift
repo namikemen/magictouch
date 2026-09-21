@@ -140,7 +140,7 @@ public final class GestureRecognizer {
                 }
             }
 
-            // Live Pinch Detection across 2 or 3 active fingers
+            // Track spread changes across 2 or 3 active fingers
             if activeFingers >= 2 {
                 let spread = calculateSpread(touches: touches)
                 if initialSpread == nil {
@@ -150,71 +150,6 @@ public final class GestureRecognizer {
                     let delta = spread - base
                     if delta < minSpreadDelta { minSpreadDelta = delta }
                     if delta > maxSpreadDelta { maxSpreadDelta = delta }
-
-                    // Check if fingers are translating together (swipe) rather than pinching in place
-                    var isCoherentSwipe = false
-                    var centroidMoved: Float = 0
-                    if touches.count >= 2 {
-                        var sumDx: Float = 0
-                        var sumDy: Float = 0
-                        var allSameSignX = true
-                        var allSameSignY = true
-                        var firstSignX: Float? = nil
-                        var firstSignY: Float? = nil
-
-                        for t in touches {
-                            if let initT = initialTouches[t.id] {
-                                let dx = t.x - initT.x
-                                let dy = t.y - initT.y
-                                sumDx += dx
-                                sumDy += dy
-
-                                if abs(dx) > 0.03 {
-                                    let sX: Float = dx > 0 ? 1.0 : -1.0
-                                    if let first = firstSignX {
-                                        if first != sX { allSameSignX = false }
-                                    } else {
-                                        firstSignX = sX
-                                    }
-                                }
-                                if abs(dy) > 0.03 {
-                                    let sY: Float = dy > 0 ? 1.0 : -1.0
-                                    if let first = firstSignY {
-                                        if first != sY { allSameSignY = false }
-                                    } else {
-                                        firstSignY = sY
-                                    }
-                                }
-                            }
-                        }
-                        let avgDx = sumDx / Float(touches.count)
-                        let avgDy = sumDy / Float(touches.count)
-                        centroidMoved = hypot(avgDx, avgDy)
-                        if centroidMoved >= 0.06 && (allSameSignX || allSameSignY) {
-                            isCoherentSwipe = true
-                        }
-                    }
-
-                    // Only trigger live pinch if fingers are not swiping together and centroid hasn't moved far
-                    if !hasTriggeredPinch && !isCoherentSwipe && centroidMoved < 0.07 {
-                        if delta <= -pinchMinDelta {
-                            hasTriggeredPinch = true
-                            if activeFingers == 2 {
-                                delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchIn)
-                            } else if activeFingers == 3 {
-                                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchIn)
-                            }
-                            suppressedTouchIds.formUnion(touches.map { $0.id })
-                        } else if delta >= pinchMinDelta {
-                            hasTriggeredPinch = true
-                            if activeFingers == 2 {
-                                delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchOut)
-                            } else if activeFingers == 3 {
-                                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchOut)
-                            }
-                            suppressedTouchIds.formUnion(touches.map { $0.id })
-                        }
-                    }
                 }
             }
 
@@ -320,71 +255,100 @@ public final class GestureRecognizer {
         let avgDx = count > 0 ? (totalDx / count) : 0
         let avgDy = count > 0 ? (totalDy / count) : 0
         let distance = sqrt(avgDx * avgDx + avgDy * avgDy)
-        let spreadChange = max(abs(minSpreadDelta), abs(maxSpreadDelta))
 
-        // 1. Check for Swipes FIRST (Prioritize over pinch when all fingers translate coherently in swipe direction)
-        if distance >= swipeMinDistance {
-            let dominantIsX = abs(avgDx) > abs(avgDy)
-            var allFingersTranslated = true
+        // 1. 2-Finger Gestures (Accurately distinguish Swipe Left/Right/Up/Down vs Pinch In/Out)
+        if fingerCount == 2 {
+            let sorted = initialTouches.values.sorted { $0.x < $1.x }
+            if sorted.count == 2 {
+                let leftInit = sorted[0]
+                let rightInit = sorted[1]
+                let leftFinal = currentTouches[leftInit.id] ?? leftInit
+                let rightFinal = currentTouches[rightInit.id] ?? rightInit
 
-            for (id, initial) in initialTouches {
-                if let final = currentTouches[id] ?? initialTouches[id] {
-                    let dx = final.x - initial.x
-                    let dy = final.y - initial.y
-                    if dominantIsX {
-                        if abs(dx) < 0.05 || (dx * avgDx <= 0) {
-                            allFingersTranslated = false
-                        }
-                    } else {
-                        if abs(dy) < 0.05 || (dy * avgDy <= 0) {
-                            allFingersTranslated = false
-                        }
-                    }
+                let leftDx = leftFinal.x - leftInit.x
+                let rightDx = rightFinal.x - rightInit.x
+                let leftDy = leftFinal.y - leftInit.y
+                let rightDy = rightFinal.y - rightInit.y
+
+                let avgDx = (leftDx + rightDx) / 2.0
+                let avgDy = (leftDy + rightDy) / 2.0
+                let centroidTranslation = hypot(avgDx, avgDy)
+                let spreadDelta = minSpreadDelta
+
+                // SWIPE LEFT:
+                // Hand translated left. Trailing finger (right) moved left. Leading finger (left) did NOT move right.
+                // Spread change was not a massive convergence dominating the translation.
+                if avgDx <= -0.065 && rightDx <= -0.05 && leftDx <= 0.025 && abs(avgDx) > abs(avgDy) && (abs(spreadDelta) < abs(avgDx) * 1.35) {
+                    dispatchSwipe(fingerCount: 2, direction: .left)
+                    return
                 }
-            }
 
-            let isCoherentSwipe = allFingersTranslated && (distance >= spreadChange * 1.1)
-
-            if isCoherentSwipe {
-                if dominantIsX {
-                    // Horizontal Swipe
-                    if avgDx > 0 {
-                        dispatchSwipe(fingerCount: fingerCount, direction: .right)
-                    } else {
-                        dispatchSwipe(fingerCount: fingerCount, direction: .left)
-                    }
-                } else {
-                    // Vertical Swipe
-                    if avgDy > 0 {
-                        dispatchSwipe(fingerCount: fingerCount, direction: .up)
-                    } else {
-                        dispatchSwipe(fingerCount: fingerCount, direction: .down)
-                    }
+                // SWIPE RIGHT:
+                // Hand translated right. Trailing finger (left) moved right. Leading finger (right) did NOT move left.
+                if avgDx >= 0.065 && leftDx >= 0.05 && rightDx >= -0.025 && abs(avgDx) > abs(avgDy) && (abs(spreadDelta) < abs(avgDx) * 1.35) {
+                    dispatchSwipe(fingerCount: 2, direction: .right)
+                    return
                 }
-                return
-            }
-        }
 
-        // 2. Check for 2-finger or 3-finger pinch/spread (if not already triggered live and not a swipe)
-        if !hasTriggeredPinch && fingerCount >= 2 {
-            if minSpreadDelta <= -pinchMinDelta && (spreadChange >= distance * 0.8 || distance < swipeMinDistance) {
-                hasTriggeredPinch = true
-                if fingerCount == 2 {
+                // SWIPE UP:
+                if avgDy >= 0.065 && leftDy >= 0.025 && rightDy >= 0.025 && abs(avgDy) >= abs(avgDx) {
+                    dispatchSwipe(fingerCount: 2, direction: .up)
+                    return
+                }
+
+                // SWIPE DOWN:
+                if avgDy <= -0.065 && leftDy <= -0.025 && rightDy <= -0.025 && abs(avgDy) >= abs(avgDx) {
+                    dispatchSwipe(fingerCount: 2, direction: .down)
+                    return
+                }
+
+                // PINCH IN:
+                // Spread narrowed by >= pinchMinDelta, fingers converged towards each other,
+                // or one finger remained anchored while the other closed inward (spread change >> translation)
+                let isConverging = (leftDx > -0.015 && rightDx < 0.015) || (leftDx * rightDx < 0)
+                let isAsymmetricalPinch = (abs(spreadDelta) >= centroidTranslation * 1.5) && (abs(leftDx) <= 0.03 || abs(rightDx) <= 0.03)
+                if spreadDelta <= -pinchMinDelta && (isConverging || isAsymmetricalPinch) && (centroidTranslation < 0.06 || isAsymmetricalPinch) {
                     delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchIn)
                     return
-                } else if fingerCount == 3 {
-                    delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchIn)
-                    return
                 }
-            } else if maxSpreadDelta >= pinchMinDelta {
-                hasTriggeredPinch = true
-                if fingerCount == 2 {
+
+                // PINCH OUT:
+                if maxSpreadDelta >= pinchMinDelta && centroidTranslation < 0.09 {
                     delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchOut)
                     return
-                } else if fingerCount == 3 {
-                    delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchOut)
-                    return
                 }
+            }
+        } else if fingerCount >= 3 && distance >= swipeMinDistance {
+            // General 3 or 4-finger swipe
+            if abs(avgDx) > abs(avgDy) {
+                if avgDx > 0 { dispatchSwipe(fingerCount: fingerCount, direction: .right) }
+                else { dispatchSwipe(fingerCount: fingerCount, direction: .left) }
+            } else {
+                if avgDy > 0 { dispatchSwipe(fingerCount: fingerCount, direction: .up) }
+                else { dispatchSwipe(fingerCount: fingerCount, direction: .down) }
+            }
+            return
+        } else if fingerCount == 1 && distance >= swipeMinDistance {
+            // 1-finger swipe
+            if abs(avgDx) > abs(avgDy) {
+                if avgDx > 0 { dispatchSwipe(fingerCount: 1, direction: .right) }
+                else { dispatchSwipe(fingerCount: 1, direction: .left) }
+            } else {
+                if avgDy > 0 { dispatchSwipe(fingerCount: 1, direction: .up) }
+                else { dispatchSwipe(fingerCount: 1, direction: .down) }
+            }
+            return
+        }
+
+        // 2. 3-Finger Pinch In/Out
+        if fingerCount == 3 {
+            let centroidTranslation = hypot(avgDx, avgDy)
+            if minSpreadDelta <= -pinchMinDelta && centroidTranslation < 0.08 {
+                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchIn)
+                return
+            } else if maxSpreadDelta >= pinchMinDelta && centroidTranslation < 0.08 {
+                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchOut)
+                return
             }
         }
 
