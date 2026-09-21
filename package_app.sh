@@ -156,6 +156,10 @@ EOF
 
 echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
+# Code sign the app bundle (ad-hoc) with bundle identifier matching Info.plist
+echo "==> Signing app bundle with identifier com.namikemen.magictouch..."
+codesign --force --deep --sign - --identifier "com.namikemen.magictouch" "$APP_BUNDLE"
+
 # 4. Create DMG Installer (with graceful fallback if sandboxed)
 echo "==> [4/6] Creating DMG Installer..."
 mkdir -p "$DMG_STAGE"
