@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initReleaseData();
   initClipboard();
   initMobileMenu();
+  initSimulatorControls();
 });
 
 /**
@@ -134,3 +135,52 @@ function initMobileMenu() {
     }
   });
 }
+
+/**
+ * Wire up interactive controls for the Magic Mouse simulator, preset bar, and audio toggle.
+ */
+function initSimulatorControls() {
+  // Preset buttons
+  const presetButtons = document.querySelectorAll('.preset-btn');
+  presetButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gesture = btn.getAttribute('data-gesture');
+      if (window.simulator && gesture) {
+        window.simulator.stopAutoTour();
+        window.simulator.playGesture(gesture, true);
+      }
+    });
+  });
+
+  // Auto-tour button
+  const autoTourBtn = document.getElementById('auto-tour-btn');
+  if (autoTourBtn) {
+    autoTourBtn.addEventListener('click', () => {
+      if (window.simulator) {
+        window.simulator.toggleAutoTour();
+      }
+    });
+  }
+
+  // Sound haptic toggle button
+  const soundBtn = document.getElementById('sound-toggle-btn');
+  const soundIcon = document.getElementById('sound-icon');
+  const soundLabel = document.getElementById('sound-label');
+
+  if (soundBtn && window.hapticAudio) {
+    window.hapticAudio.onMuteChange((isMuted) => {
+      if (soundIcon) soundIcon.textContent = isMuted ? '🔇' : '🔊';
+      if (soundLabel) soundLabel.textContent = isMuted ? 'Audio: Off' : 'Audio: On';
+      if (isMuted) {
+        soundBtn.classList.remove('border-blue-500/50', 'text-blue-400', 'bg-blue-500/10');
+      } else {
+        soundBtn.classList.add('border-blue-500/50', 'text-blue-400', 'bg-blue-500/10');
+      }
+    });
+
+    soundBtn.addEventListener('click', () => {
+      window.hapticAudio.toggleMute();
+    });
+  }
+}
+
