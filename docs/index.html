@@ -279,16 +279,152 @@
     <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Private framework hooks, sub-millisecond latency, and native SwiftUI popover.</p>
   </section>
 
-  <section id="simulator" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
-    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Interactive Mouse Playground</h2>
-    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Try multi-touch gestures directly on the virtual surface below (built in Phase 2).</p>
+  <!-- Interactive Magic Mouse Simulator Section -->
+  <section id="simulator" class="py-24 px-4 max-w-6xl mx-auto border-t border-white/5 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+        <span>Interactive Hardware Simulator</span>
+      </div>
+      <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+        Feel the Hardware. <span class="text-gradient-accent">Try Every Gesture.</span>
+      </h2>
+      <p class="text-sm sm:text-base text-[#98989f] leading-relaxed">
+        Experience MagicTouch's raw capacitive multi-touch tracking live in your browser. Touch or drag across the virtual surface, or run automated gesture tours below.
+      </p>
+    </div>
+
+    <!-- Preset Gesture Toolbar & Sound Toggle -->
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10 max-w-4xl mx-auto">
+      <button data-gesture="middle-click" class="preset-btn active px-4 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/90 flex items-center space-x-2">
+        <span>🖱️</span>
+        <span>Middle Click (3-Finger)</span>
+      </button>
+      <button data-gesture="tip-tap" class="preset-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/90 flex items-center space-x-2">
+        <span>👆</span>
+        <span>Tip-Tap Right</span>
+      </button>
+      <button data-gesture="pinch" class="preset-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/90 flex items-center space-x-2">
+        <span>🤏</span>
+        <span>2-Finger Pinch</span>
+      </button>
+      <button data-gesture="swipe" class="preset-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/90 flex items-center space-x-2">
+        <span>↔️</span>
+        <span>Spaces Swipe</span>
+      </button>
+      <button data-gesture="four-tap" class="preset-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/90 flex items-center space-x-2">
+        <span>🖐️</span>
+        <span>4-Finger Tap</span>
+      </button>
+      <button id="auto-tour-btn" class="px-4 py-2 rounded-full text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-600/30 to-cyan-500/30 border border-cyan-400/40 text-cyan-300 hover:from-blue-600/40 hover:to-cyan-500/40 transition-all flex items-center space-x-2">
+        <span>✨</span>
+        <span id="auto-tour-text">Auto-Tour</span>
+      </button>
+      <button id="sound-toggle-btn" class="px-3.5 py-2 rounded-full text-xs sm:text-sm font-medium glass-pill text-white/70 hover:text-white transition-all flex items-center space-x-2" title="Toggle Haptic Audio (Procedural Click Sounds)">
+        <span id="sound-icon">🔇</span>
+        <span id="sound-label">Audio: Off</span>
+      </button>
+    </div>
+
+    <!-- Simulator Showcase Stage (Dual Column on Desktop) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center max-w-5xl mx-auto">
+      <!-- Left Column: Virtual Mouse Surface Canvas -->
+      <div class="lg:col-span-6 flex flex-col items-center">
+        <div class="simulator-canvas-wrapper w-full relative">
+          <canvas id="mouse-canvas"></canvas>
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none text-center">
+            <span class="inline-block px-3 py-1 rounded-full text-[11px] font-medium bg-black/60 backdrop-blur-md text-white/60 border border-white/10">
+              Drag mouse or touch surface
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Recognition HUD & Telemetry -->
+      <div class="lg:col-span-6 flex flex-col space-y-4">
+        <!-- Live Gesture Recognition Card -->
+        <div id="recognition-hud" class="glass-panel rounded-2xl p-6 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+            <span class="text-xs uppercase tracking-wider text-[#86868b] font-semibold">Live Recognition Engine</span>
+            <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Online</span>
+            </span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="text-xs text-[#98989f] mb-1">Detected Gesture</div>
+              <div class="flex items-center space-x-3">
+                <span id="hud-gesture-icon" class="text-2xl">🖱️</span>
+                <div>
+                  <div id="hud-gesture-name" class="text-lg font-bold text-white">Middle Click (3-Finger)</div>
+                  <div id="hud-gesture-desc" class="text-xs text-[#86868b]">3 simultaneous contact points in upper active zone</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-black/30 rounded-xl p-3 border border-white/5">
+              <div class="text-xs text-[#98989f] mb-1">Simulated macOS Action</div>
+              <div class="flex items-center space-x-2">
+                <span class="text-blue-400 font-mono text-sm">⚡</span>
+                <span id="hud-action-desc" class="text-sm font-semibold text-blue-300">Mouse Button 3 (Open Link in Background Tab)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TouchPoint Telemetry Matrix -->
+        <div class="glass-panel rounded-2xl p-6">
+          <div class="text-xs uppercase tracking-wider text-[#86868b] font-semibold mb-4 border-b border-white/5 pb-3 flex items-center justify-between">
+            <span>MultitouchSupport Telemetry</span>
+            <span class="text-[10px] font-mono text-blue-400/80">&lt;1ms latency</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-left font-mono text-xs">
+            <div class="bg-black/20 rounded-lg p-2.5 border border-white/5">
+              <span class="text-[#86868b] block text-[10px] uppercase font-sans">Active Contacts</span>
+              <span id="telemetry-contacts" class="text-white font-bold text-sm">3 fingers</span>
+            </div>
+            <div class="bg-black/20 rounded-lg p-2.5 border border-white/5">
+              <span class="text-[#86868b] block text-[10px] uppercase font-sans">Touch Phase</span>
+              <span id="telemetry-phase" class="text-cyan-400 font-bold text-sm">Recognized</span>
+            </div>
+            <div class="bg-black/20 rounded-lg p-2.5 border border-white/5">
+              <span class="text-[#86868b] block text-[10px] uppercase font-sans">Normalized Pos (X, Y)</span>
+              <span id="telemetry-coords" class="text-white font-semibold text-xs">0.50, 0.75</span>
+            </div>
+            <div class="bg-black/20 rounded-lg p-2.5 border border-white/5">
+              <span class="text-[#86868b] block text-[10px] uppercase font-sans">Contact Force / Size</span>
+              <span id="telemetry-force" class="text-purple-400 font-semibold text-xs">18.4 pt²</span>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-[#86868b]">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span>Zero-lag event dispatch</span>
+            </span>
+            <span class="text-[11px]">Direct C-API hook</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
+  <!-- Features Section -->
+  <section id="features" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
+    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Engineered for Apple Silicon & macOS</h2>
+    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Private framework hooks, sub-millisecond latency, and native SwiftUI popover.</p>
+  </section>
+
+  <!-- Gestures Section -->
   <section id="gestures" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
     <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">30+ Gesture Combinations</h2>
     <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">From middle click to tip-taps and pinches (built in Phase 3).</p>
   </section>
 
+  <!-- Installation Section -->
   <section id="installation" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
     <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Quick Installation & Permissions</h2>
     <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Simple DMG drag-and-drop with macOS Accessibility setup (built in Phase 3).</p>
@@ -309,7 +445,11 @@
         <a href="https://github.com/namikemen/magictouch/releases" target="_blank" rel="noopener" class="hover:text-white transition-colors">Releases</a>
       </div>
     </div>
-  <!-- Main Application Script -->
+  </footer>
+
+  <!-- Application Scripts -->
+  <script src="js/audio.js" defer></script>
+  <script src="js/simulator.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>
 </html>
