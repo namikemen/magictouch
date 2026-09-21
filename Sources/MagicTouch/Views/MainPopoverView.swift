@@ -5,6 +5,7 @@ public struct MainPopoverView: View {
     @ObservedObject var appState: AppState = AppState.shared
     @ObservedObject var configStore: ConfigurationStore = ConfigurationStore.shared
     @ObservedObject var permissionManager: PermissionManager = PermissionManager.shared
+    @ObservedObject var updateChecker: UpdateChecker = UpdateChecker.shared
 
     public init() {}
 
@@ -49,6 +50,9 @@ public struct MainPopoverView: View {
 
             // Permission Banner
             PermissionBannerView(permissionManager: permissionManager)
+
+            // Update Banner
+            UpdateBannerView()
 
             Divider()
 
@@ -157,7 +161,7 @@ public struct MainPopoverView: View {
             Divider()
 
             // Footer Bar
-            HStack {
+            HStack(spacing: 12) {
                 Button("Quit MagicTouch") {
                     NSApplication.shared.terminate(nil)
                 }
@@ -165,11 +169,36 @@ public struct MainPopoverView: View {
                 .foregroundColor(.secondary)
                 .font(.system(size: 11))
 
+                Button(action: {
+                    updateChecker.checkForUpdates(manual: true)
+                }) {
+                    HStack(spacing: 4) {
+                        if updateChecker.isChecking {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 9))
+                        }
+                        Text(updateChecker.isChecking ? "Checking..." : "Check for Updates")
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+                .font(.system(size: 11))
+
+                if let status = updateChecker.statusMessage, !updateChecker.isUpdateAvailable {
+                    Text(status)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
                 Spacer()
 
-                Text("Apple Magic Mouse Engine")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.7))
+                Text("v\(updateChecker.currentVersion)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary.opacity(0.8))
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 8)

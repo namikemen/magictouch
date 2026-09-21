@@ -1,0 +1,133 @@
+name: Release MagicTouch
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version tag to release (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS Universal App
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Release Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building MagicTouch version $VERSION (tag: $TAG)"
+
+      - name: Package Universal App, DMG, and Tarball
+        run: |
+          chmod +x package_app.sh
+          ./package_app.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: |
+            .build/dist/*.dmg
+            .build/dist/*.tar.gz
+            .build/dist/*.zip
+            .build/dist/checksums.txt
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release & Updater Manifest
+    needs: build-macos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Release Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release-assets
+          path: dist
+
+      - name: Assemble latest.json Updater Manifest
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          TAR_SHA=$(sha256sum dist/MagicTouch.app.tar.gz 2>/dev/null | awk '{print $1}' || echo "")
+          ZIP_SHA=$(sha256sum dist/MagicTouch-macOS.zip 2>/dev/null | awk '{print $1}' || echo "")
+          DMG_SHA=""
+          if [ -f dist/MagicTouch.dmg ]; then
+            DMG_SHA=$(sha256sum dist/MagicTouch.dmg | awk '{print $1}')
+          fi
+
+          cat <<EOF > dist/latest.json
+          {
+            "version": "$VERSION",
+            "notes": "MagicTouch $TAG release",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "darwin-universal": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch.app.tar.gz",
+                "signature": "$TAR_SHA"
+              },
+              "dmg": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch.dmg",
+                "signature": "$DMG_SHA"
+              },
+              "zip": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch-macOS.zip",
+                "signature": "$ZIP_SHA"
+              }
+            }
+          }
+          EOF
+
+          # Refresh checksums including latest.json
+          (cd dist && sha256sum * > checksums.txt)
+          cat dist/latest.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: MagicTouch ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

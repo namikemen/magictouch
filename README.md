@@ -116,15 +116,41 @@ Compile directly using the build script:
 The compiled native executable will be created at `.build/bin/MagicTouch`.
 
 ### 2. Run Automated Test Suite
-Verify all 20 recognition suites (Tip-Taps, Pinches, Swipes, Multi-Taps, Mouse Buttons):
+Verify all 22 recognition suites (Tip-Taps, Pinches, Swipes, Multi-Taps, Mouse Buttons, SemVer & Manifest):
 ```bash
 ./run_tests.sh
 ```
 
-### 3. Launch MagicTouch
+### 3. Package macOS Universal App & DMG
+Generate a Universal binary (`arm64` + `x86_64`) bundle (`MagicTouch.app`), `.dmg`, and updater archive:
+```bash
+./package_app.sh 1.0.0
+```
+Distribution assets will be created in `.build/dist/`.
+
+### 4. Launch MagicTouch
 ```bash
 ./.build/bin/MagicTouch
 ```
+
+---
+
+## 🔄 Automatic Releases & In-App Updates
+
+MagicTouch includes an automated release pipeline modeled after modern distribution standards:
+
+1. **GitHub CI/CD Automation**:
+   Pushing any version tag (e.g. `v1.0.1`) triggers `.github/workflows/release.yml` on a macOS Apple Silicon runner:
+   - Builds a Universal binary (`arm64` + `x86_64`) running natively on all Macs.
+   - Packages `MagicTouch.dmg` with drag-and-drop `/Applications` installer.
+   - Generates `MagicTouch.app.tar.gz` and `latest.json` updater manifest with SHA256 checksums.
+   - Automatically publishes a GitHub Release.
+
+2. **In-App Updater**:
+   - Checks `latest.json` directly from the release feed without GitHub API rate limits.
+   - Displays an in-app update notification banner when a new version is available.
+   - Provides one-click **Download DMG** with live progress tracking, saving directly to `~/Downloads` and launching the installer.
+   - Includes a manual "Check for Updates" button in the popover footer.
 
 ---
 

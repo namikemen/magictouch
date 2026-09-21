@@ -438,6 +438,66 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(action, .mouseButton(button: .middleClick), "Default 3-finger click resolves to Middle Click")
     }
 
+    func testSemVerComparison() {
+        print("Running: Semantic Version (SemVer) Comparison...")
+        let v1_0_0 = SemVer("1.0.0")
+        let v1_0_1 = SemVer("v1.0.1")
+        let v1_2_0 = SemVer("1.2")
+        let v2_0_0 = SemVer("v2.0.0-beta")
+
+        XCTAssertDefault(v1_0_1 > v1_0_0, "v1.0.1 is newer than 1.0.0")
+        XCTAssertDefault(v1_2_0 > v1_0_1, "1.2.0 is newer than v1.0.1")
+        XCTAssertDefault(v2_0_0 > v1_2_0, "v2.0.0-beta is newer than 1.2.0")
+        XCTAssertDefault(SemVer("1.0.0") == SemVer("v1.0.0"), "1.0.0 equals v1.0.0")
+        XCTAssertDefault(!(v1_0_0 > v1_0_1), "1.0.0 is not newer than v1.0.1")
+    }
+
+    func testUpdateManifestDecoding() {
+        print("Running: UpdateManifest & GitHubRelease JSON Decoding...")
+        let manifestJSON = """
+        {
+          "version": "1.1.0",
+          "notes": "Added update checker and release automation",
+          "pub_date": "2026-09-21T15:00:00Z",
+          "platforms": {
+            "darwin-universal": {
+              "url": "https://github.com/namikemen/magictouch/releases/download/v1.1.0/MagicTouch.app.tar.gz",
+              "signature": "sha256abc"
+            },
+            "dmg": {
+              "url": "https://github.com/namikemen/magictouch/releases/download/v1.1.0/MagicTouch.dmg",
+              "signature": "sha256dmg"
+            }
+          }
+        }
+        """.data(using: .utf8)!
+
+        let manifest = try? JSONDecoder().decode(UpdateManifest.self, from: manifestJSON)
+        XCTAssertDefault(manifest != nil, "Successfully decoded UpdateManifest")
+        assertEqual(manifest?.version, "1.1.0", "Decoded version matches 1.1.0")
+        assertEqual(manifest?.platforms?["dmg"]?.url, "https://github.com/namikemen/magictouch/releases/download/v1.1.0/MagicTouch.dmg", "Decoded dmg URL")
+
+        let githubJSON = """
+        {
+          "tag_name": "v1.2.0",
+          "name": "MagicTouch v1.2.0",
+          "body": "Release notes here",
+          "html_url": "https://github.com/namikemen/magictouch/releases/tag/v1.2.0",
+          "assets": [
+            {
+              "name": "MagicTouch.dmg",
+              "browser_download_url": "https://github.com/namikemen/magictouch/releases/download/v1.2.0/MagicTouch.dmg"
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let release = try? JSONDecoder().decode(GitHubRelease.self, from: githubJSON)
+        XCTAssertDefault(release != nil, "Successfully decoded GitHubRelease fallback")
+        assertEqual(release?.tagName, "v1.2.0", "Decoded tagName")
+        assertEqual(release?.assets.first?.name, "MagicTouch.dmg", "Decoded asset name")
+    }
+
     private func XCTAssertDefault(_ condition: Bool, _ msg: String) {
         if condition {
             print("  ✅ PASS: \(msg)")
@@ -452,6 +512,8 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
 struct RunnerApp {
     static func main() {
         let runner = GestureRecognizerTestsRunner()
+        runner.testSemVerComparison()
+        runner.testUpdateManifestDecoding()
         runner.testOneFingerTapLeftDetection()
         runner.testOneFingerTapRightDetection()
         runner.testOneFingerTripleTapDetection()
@@ -472,6 +534,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 20 MagicTouch test suites passed successfully!")
+        print("🎉 All 22 MagicTouch test suites passed successfully!")
     }
 }

@@ -52,6 +52,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
         if !PermissionManager.shared.hasInputMonitoring {
             PermissionManager.shared.requestInputMonitoring()
         }
+
+        // Check for updates in background after startup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            UpdateChecker.shared.checkForUpdates(manual: false)
+        }
     }
 
     @objc func togglePopover() {
