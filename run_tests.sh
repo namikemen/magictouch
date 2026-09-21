@@ -5,7 +5,17 @@ SDK_PATH=$(xcrun --show-sdk-path)
 BUILD_DIR=".build/bin"
 CACHE_DIR="$PWD/.cache"
 
-mkdir -p "$BUILD_DIR"
+mkdir -p "$BUILD_DIR" "$CACHE_DIR/clang" "$CACHE_DIR/module"
+
+if [ ! -f "$BUILD_DIR/MultitouchBridge.o" ]; then
+  echo "==> Compiling MultitouchBridge dependency..."
+  clang -c Sources/MultitouchBridge/MultitouchBridge.m \
+    -isysroot "$SDK_PATH" \
+    -I Sources/MultitouchBridge/include \
+    -F /System/Library/PrivateFrameworks \
+    -fmodules-cache-path="$CACHE_DIR/clang" \
+    -o "$BUILD_DIR/MultitouchBridge.o"
+fi
 
 echo "==> Compiling Test Runner..."
 swiftc \
