@@ -1,6 +1,15 @@
-# MagicTouch 🪄🖱️
+<div align="center">
+  <img src="logo.png" alt="MagicTouch Logo" width="180" />
+  <h1>MagicTouch 🪄🖱️</h1>
+  <p><strong>A native macOS menu bar utility for the Apple Magic Mouse that brings powerful, ultra-responsive custom multitouch gestures and action bindings to your workflow.</strong></p>
 
-A native macOS menu bar utility for the **Apple Magic Mouse** that brings powerful, ultra-responsive custom multitouch gestures and action bindings to your workflow.
+  <p>
+    <a href="https://github.com/namikemen/magictouch/releases/latest"><img src="https://img.shields.io/github/v/release/namikemen/magictouch?color=blue&label=Latest%20Release" alt="Latest Release" /></a>
+    <img src="https://img.shields.io/badge/Platform-macOS%2013.0%2B-lightgrey?logo=apple" alt="macOS 13.0+" />
+    <img src="https://img.shields.io/badge/Architecture-Universal%20(arm64%20%2B%20x86__64)-purple" alt="Universal" />
+    <img src="https://img.shields.io/badge/License-MIT-green" alt="License MIT" />
+  </p>
+</div>
 
 ---
 
@@ -116,7 +125,7 @@ Compile directly using the build script:
 The compiled native executable will be created at `.build/bin/MagicTouch`.
 
 ### 2. Run Automated Test Suite
-Verify all 22 recognition suites (Tip-Taps, Pinches, Swipes, Multi-Taps, Mouse Buttons, SemVer & Manifest):
+Verify all 27 recognition suites (Tip-Taps, Pinches, Swipes, Multi-Taps, Mouse Buttons, SemVer & Manifest):
 ```bash
 ./run_tests.sh
 ```
