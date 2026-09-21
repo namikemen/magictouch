@@ -8,7 +8,7 @@ Build a modern, responsive, dark-mode glassmorphic showcase website and interact
 
 - [x] **Phase 1: Design System, Layout & Hero Showcase** - Zero-build `docs/` foundation, glassmorphic styling, responsive layout, and GitHub Releases download CTA.
 - [x] **Phase 2: Interactive Magic Mouse Canvas Simulator** - Virtual mouse surface, real-time capacitive touch visualization, gesture tour playback, and Web Audio haptic feedback.
-- [ ] **Phase 3: Gesture Matrix, Installation Guide & GitHub Pages Readiness** - 30+ gesture matrix, action targets, macOS permission walkthrough, and GitHub Pages deployment verification.
+- [x] **Phase 3: Gesture Matrix, Installation Guide & GitHub Pages Readiness** - 30+ gesture matrix, action targets, macOS permission walkthrough, and GitHub Pages deployment verification.
 
 ## Phase Details
 
@@ -56,8 +56,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Build the filterable 30+ gesture matrix, action targets grid, and native popover mockup.
-- [ ] 03-02: Build the macOS permissions walkthrough guide, SEO/OpenGraph metadata, and verify GitHub Pages local serving.
+- [x] 03-01: Build the filterable 30+ gesture matrix, action targets grid, and native popover mockup.
+- [x] 03-02: Build the macOS permissions walkthrough guide, SEO/OpenGraph metadata, and verify GitHub Pages local serving.
 
 ## Progress
 
@@ -68,7 +68,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Design System, Layout & Hero Showcase | 2/2 | Complete | 2026-09-21 |
 | 2. Interactive Magic Mouse Canvas Simulator | 2/2 | Complete | 2026-09-21 |
-| 3. Gesture Matrix, Installation Guide & GitHub Pages Readiness | 0/2 | Not started | - |
+| 3. Gesture Matrix, Installation Guide & GitHub Pages Readiness | 2/2 | Complete | 2026-09-21 |
 
 ---
 

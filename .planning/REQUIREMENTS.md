@@ -27,21 +27,21 @@
 - [x] **SIM-05**: User can toggle synthesized procedural audio haptics (mechanical clicks and taps via Web Audio API) on and off.
 
 ### Gesture Matrix & Actions (MTRX)
-
-- [ ] **MTRX-01**: User can browse the complete matrix of 30+ supported gestures filterable by finger count (1, 2, 3, and 4 fingers).
-- [ ] **MTRX-02**: Each gesture card displays gesture name, category, description, and available action bindings.
-- [ ] **MTRX-03**: Action target cards highlight mouse button simulations (Left, Right, Middle, Double, Triple Click), Hotkey recording, AppleScript, and Shell commands.
+ 
+- [x] **MTRX-01**: User can browse the complete matrix of 30+ supported gestures filterable by finger count (1, 2, 3, and 4 fingers).
+- [x] **MTRX-02**: Each gesture card displays gesture name, category, description, and available action bindings.
+- [x] **MTRX-03**: Action target cards highlight mouse button simulations (Left, Right, Middle, Double, Triple Click), Hotkey recording, AppleScript, and Shell commands.
 
 ### Architecture & Installation Guide (GUIDE)
-
-- [ ] **GUIDE-01**: User can review technical architecture highlights (sub-millisecond private framework interception, zero background telemetry, native Swift/AppKit).
-- [ ] **GUIDE-02**: User can follow a visual step-by-step walkthrough for granting macOS Accessibility and Input Monitoring permissions.
-- [ ] **GUIDE-03**: User can view an interactive preview recreating the native SwiftUI menu bar popover interface.
+ 
+- [x] **GUIDE-01**: User can review technical architecture highlights (sub-millisecond private framework interception, zero background telemetry, native Swift/AppKit).
+- [x] **GUIDE-02**: User can follow a visual step-by-step walkthrough for granting macOS Accessibility and Input Monitoring permissions.
+- [x] **GUIDE-03**: User can view an interactive preview recreating the native SwiftUI menu bar popover interface.
 
 ### Deployment & GitHub Pages (DPLY)
-
-- [ ] **DPLY-01**: Website is packaged in `docs/` with zero build dependencies, enabling immediate activation on GitHub Pages.
-- [ ] **DPLY-02**: Site includes SEO metadata, OpenGraph tags, Apple touch icons, and clean repository documentation links.
+ 
+- [x] **DPLY-01**: Website is packaged in `docs/` with zero build dependencies, enabling immediate activation on GitHub Pages.
+- [x] **DPLY-02**: Site includes SEO metadata, OpenGraph tags, Apple touch icons, and clean repository documentation links.
 
 ## v2 Requirements
 
@@ -77,14 +77,14 @@ Which phases cover which requirements. (Populated during roadmap creation).
 | SIM-03  | Phase 2 | Complete |
 | SIM-04  | Phase 2 | Complete |
 | SIM-05  | Phase 2 | Complete |
-| MTRX-01 | Phase 3 | Pending |
-| MTRX-02 | Phase 3 | Pending |
-| MTRX-03 | Phase 3 | Pending |
-| GUIDE-01 | Phase 3 | Pending |
-| GUIDE-02 | Phase 3 | Pending |
-| GUIDE-03 | Phase 3 | Pending |
-| DPLY-01 | Phase 3 | Pending |
-| DPLY-02 | Phase 3 | Pending |
+| MTRX-01 | Phase 3 | Complete |
+| MTRX-02 | Phase 3 | Complete |
+| MTRX-03 | Phase 3 | Complete |
+| GUIDE-01 | Phase 3 | Complete |
+| GUIDE-02 | Phase 3 | Complete |
+| GUIDE-03 | Phase 3 | Complete |
+| DPLY-01 | Phase 3 | Complete |
+| DPLY-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
