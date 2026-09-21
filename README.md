@@ -144,22 +144,39 @@ Distribution assets will be created in `.build/dist/`.
 
 ---
 
-## 🔄 Automatic Releases & In-App Updates
+## 🔄 Automated Release & Continuous Integration
 
-MagicTouch includes an automated release pipeline modeled after modern distribution standards:
+MagicTouch features a zero-friction, fully automated CI/CD release pipeline:
 
-1. **GitHub CI/CD Automation**:
-   Pushing any version tag (e.g. `v1.0.1`) triggers `.github/workflows/release.yml` on a macOS Apple Silicon runner:
-   - Builds a Universal binary (`arm64` + `x86_64`) running natively on all Macs.
-   - Packages `MagicTouch.dmg` with drag-and-drop `/Applications` installer.
-   - Generates `MagicTouch.app.tar.gz` and `latest.json` updater manifest with SHA256 checksums.
-   - Automatically publishes a GitHub Release.
+### 1. One-Command Release Script
+Easily cut and publish new releases directly from the terminal:
+```bash
+# Bump patch version (e.g. 0.1.1 -> 0.1.2), run tests, commit, tag, and publish
+./release.sh
 
-2. **In-App Updater**:
-   - Checks `latest.json` directly from the release feed without GitHub API rate limits.
-   - Displays an in-app update notification banner when a new version is available.
-   - Provides one-click **Download DMG** with live progress tracking, saving directly to `~/Downloads` and launching the installer.
-   - Includes a manual "Check for Updates" button in the popover footer.
+# Or specify a bump type or target version
+./release.sh minor    # 0.1.1 -> 0.2.0
+./release.sh major    # 0.1.1 -> 1.0.0
+./release.sh 0.2.0    # explicit target
+```
+The script will:
+1. Run all 27 automated test suites to ensure zero regressions.
+2. Update the version in `Sources/MagicTouch/Engine/UpdateChecker.swift`.
+3. Compile and verify the local binary.
+4. Generate a changelog from recent commits.
+5. Create the signed git tag and push to GitHub, kicking off the CI/CD pipeline.
+
+### 2. Automated GitHub Actions CI/CD Pipeline
+- **Auto-Release on `main`**: Whenever a commit is pushed to `main` with a bumped version that doesn't have a release tag yet, GitHub Actions automatically cuts the tag and publishes the release.
+- **Tag Pushes**: Pushing any tag (`v*.*.*`) automatically compiles the Universal binary (`arm64` + `x86_64`), packages `MagicTouch.dmg`, archives `.tar.gz` and `.zip`, generates the `latest.json` updater manifest with SHA256 signatures, and publishes the release.
+- **Manual Trigger**: The workflow can also be triggered on-demand with custom versions via GitHub's **Actions $\rightarrow$ Release MagicTouch $\rightarrow$ Run workflow**.
+- **Continuous Integration (`ci.yml`)**: Every pull request and push to `main` automatically runs tests and validates Universal packaging.
+
+### 3. In-App Auto-Updater
+- Checks `latest.json` directly from the release feed without GitHub API rate limits.
+- Displays an in-app update notification banner when a new version is available.
+- Provides one-click **Download DMG** with live progress tracking, saving directly to `~/Downloads` and launching the installer.
+- Includes a manual "Check for Updates" button in the popover footer.
 
 ---
 

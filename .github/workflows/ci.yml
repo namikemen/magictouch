@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-verify:
+    name: Run Tests & Verify Universal Build
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Test Suite
+        run: |
+          chmod +x run_tests.sh
+          ./run_tests.sh
+
+      - name: Test Native Compilation
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Test Universal App Packaging
+        run: |
+          chmod +x package_app.sh
+          ./package_app.sh 0.0.0-ci

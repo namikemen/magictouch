@@ -5,19 +5,70 @@ on:
     tags:
       - 'v*.*.*'
       - 'v*'
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version_tag:
-        description: 'Version tag to release (e.g. v0.1.0)'
+        description: 'Version tag to release (e.g. v0.1.2, or leave blank to auto-detect from codebase)'
         required: false
-        default: 'v0.1.0'
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
+  check-version:
+    name: Determine Release Target
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.detect.outputs.should_release }}
+      tag: ${{ steps.detect.outputs.tag }}
+      version: ${{ steps.detect.outputs.version }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Release Version
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_tag }}" ]; then
+            RAW_TAG="${{ github.event.inputs.version_tag }}"
+            CLEAN_VERSION="${RAW_TAG#v}"
+            TAG="v$CLEAN_VERSION"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "version=$CLEAN_VERSION" >> "$GITHUB_OUTPUT"
+            echo "Manual release requested for $TAG ($CLEAN_VERSION)"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Tag release triggered for $TAG ($VERSION)"
+          else
+            # Push to main branch: read version from UpdateChecker.swift
+            VERSION=$(grep -E '@Published public var currentVersion: String =' Sources/MagicTouch/Engine/UpdateChecker.swift | sed -E 's/.*"([^"]+)".*/\1/')
+            CHECK_TAG="v$VERSION"
+            if git rev-parse "$CHECK_TAG" >/dev/null 2>&1 || git ls-remote --tags origin "$CHECK_TAG" | grep -q "$CHECK_TAG"; then
+              echo "Tag $CHECK_TAG already exists. Skipping auto-release on main."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "New unreleased version $VERSION found on main! Automatically triggering release for $CHECK_TAG."
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "tag=$CHECK_TAG" >> "$GITHUB_OUTPUT"
+              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
   build-macos:
     name: Build macOS Universal App
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: macos-14
 
     steps:
@@ -29,12 +80,8 @@ jobs:
       - name: Set Release Version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.version_tag }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          VERSION="${TAG#v}"
+          TAG="${{ needs.check-version.outputs.tag }}"
+          VERSION="${{ needs.check-version.outputs.version }}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building MagicTouch version $VERSION (tag: $TAG)"
@@ -57,7 +104,8 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release & Updater Manifest
-    needs: build-macos
+    needs: [check-version, build-macos]
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -69,12 +117,8 @@ jobs:
       - name: Set Release Version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.version_tag }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          VERSION="${TAG#v}"
+          TAG="${{ needs.check-version.outputs.tag }}"
+          VERSION="${{ needs.check-version.outputs.version }}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -90,10 +134,10 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           REPO: ${{ github.repository }}
         run: |
-          # Extract git tag annotation or commit message
+          # Extract git tag annotation or commit log
           TAG_MSG=$(git tag -l --format='%(contents)' "$TAG" 2>/dev/null | sed '/^[[:space:]]*$/d')
           if [ -z "$TAG_MSG" ]; then
-            TAG_MSG=$(git log -1 --pretty=%B "$TAG" 2>/dev/null | head -n 5 || echo "MagicTouch $TAG release")
+            TAG_MSG=$(git log -1 --pretty=%B 2>/dev/null | head -n 5 || echo "MagicTouch $TAG release")
           fi
           export TAG_MSG
           export PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -153,6 +197,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: MagicTouch ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           draft: false
           prerelease: false
           generate_release_notes: true
