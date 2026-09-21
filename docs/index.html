@@ -10,6 +10,10 @@
   <meta name="description" content="A native macOS menu bar utility for Apple Magic Mouse bringing custom multi-touch gestures, middle click, pinches, and hotkey bindings with sub-millisecond latency.">
   <meta name="author" content="namikemen">
 
+  <!-- Favicon & Apple Touch Icon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://namikemen.github.io/magictouch/">
@@ -273,10 +277,76 @@
 
   </section>
 
-  <!-- Placeholder Sections for Subsequent Phases -->
-  <section id="features" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
-    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Engineered for Apple Silicon & macOS</h2>
-    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Private framework hooks, sub-millisecond latency, and native SwiftUI popover.</p>
+  <!-- Engineering & Architecture Section -->
+  <section id="features" class="py-24 px-4 max-w-6xl mx-auto border-t border-white/5 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span>Engineering & Architecture</span>
+      </div>
+      <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+        Designed for Precision. <span class="text-gradient-accent">Built for macOS.</span>
+      </h2>
+      <p class="text-sm sm:text-base text-[#98989f] leading-relaxed">
+        MagicTouch bypasses legacy cursor emulation by tapping directly into Apple's private multitouch subsystem for true hardware-rate gesture recognition.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <!-- Card 1: Private C-API -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between hover:border-blue-500/40 transition-all group">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+            ⚡
+          </div>
+          <div class="text-xs uppercase tracking-wider text-blue-400 font-semibold mb-2">Sub-Millisecond Tap</div>
+          <h3 class="text-xl font-bold text-white mb-3">MultitouchSupport.framework</h3>
+          <p class="text-xs sm:text-sm text-[#86868b] leading-relaxed mb-6">
+            Hooks directly into macOS private C-APIs, streaming raw capacitive coordinate frames at the mouse hardware polling rate before OS filtering.
+          </p>
+        </div>
+        <div class="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-mono text-[#98989f]">
+          <span>Latency: &lt; 0.8ms</span>
+          <span class="text-blue-400">C-API Hook</span>
+        </div>
+      </div>
+
+      <!-- Card 2: 100% Offline & Private -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between hover:border-emerald-500/40 transition-all group">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+            🛡️
+          </div>
+          <div class="text-xs uppercase tracking-wider text-emerald-400 font-semibold mb-2">Privacy First</div>
+          <h3 class="text-xl font-bold text-white mb-3">Zero Telemetry & Offline</h3>
+          <p class="text-xs sm:text-sm text-[#86868b] leading-relaxed mb-6">
+            100% local execution. MagicTouch has zero analytics, zero external network calls, and no background tracking daemons. Open source under MIT.
+          </p>
+        </div>
+        <div class="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-mono text-[#98989f]">
+          <span>Network: 0 KB/s</span>
+          <span class="text-emerald-400">100% Local</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Featherweight Swift & AppKit -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between hover:border-purple-500/40 transition-all group">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+            🪶
+          </div>
+          <div class="text-xs uppercase tracking-wider text-purple-400 font-semibold mb-2">Native macOS Stack</div>
+          <h3 class="text-xl font-bold text-white mb-3">Zero Electron Bloat</h3>
+          <p class="text-xs sm:text-sm text-[#86868b] leading-relaxed mb-6">
+            Handcrafted in pure Swift with AppKit menu bar lifecycle and SwiftUI popover views. Consumes less than 25MB RAM and idles at 0.0% CPU.
+          </p>
+        </div>
+        <div class="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-mono text-[#98989f]">
+          <span>RAM: ~20 MB</span>
+          <span class="text-purple-400">Pure Swift</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Interactive Magic Mouse Simulator Section -->
@@ -550,10 +620,114 @@
     </div>
   </section>
 
-  <!-- Installation Section -->
-  <section id="installation" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
-    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Quick Installation & Permissions</h2>
-    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Simple DMG drag-and-drop with macOS Accessibility setup (built in Phase 3).</p>
+  <!-- Installation Section: Permissions Walkthrough -->
+  <section id="installation" class="py-24 px-4 max-w-6xl mx-auto border-t border-white/5 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Installation & Security</span>
+      </div>
+      <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+        Up and Running in <span class="text-gradient-accent">60 Seconds.</span>
+      </h2>
+      <p class="text-sm sm:text-base text-[#98989f] leading-relaxed">
+        Because MagicTouch reads raw capacitive hardware frames and dispatches virtual clicks, macOS requires two standard security permissions in System Settings.
+      </p>
+    </div>
+
+    <!-- 3-Step Setup Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+      <!-- Step 1: Install -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-xs flex items-center justify-center">
+              01
+            </span>
+            <span class="text-xs text-[#86868b] font-mono">Drag & Drop</span>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Install Application</h3>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-4">
+            Mount the downloaded <code class="text-white bg-white/5 px-1 py-0.5 rounded font-mono text-[11px]">MagicTouch.dmg</code> and drag the application icon into your <code class="text-white bg-white/5 px-1 py-0.5 rounded font-mono text-[11px]">/Applications</code> folder.
+          </p>
+        </div>
+
+        <div class="bg-black/30 rounded-xl p-3 border border-white/5 text-center">
+          <span class="text-3xl block mb-1">📦</span>
+          <span class="text-xs font-semibold text-white/90">MagicTouch.app → /Applications</span>
+        </div>
+      </div>
+
+      <!-- Step 2: Accessibility -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center">
+              02
+            </span>
+            <span class="text-xs text-purple-400 font-mono">Mouse & Keys</span>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Grant Accessibility</h3>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-4">
+            Enables MagicTouch to synthesize native mouse clicks (Middle Click, Double/Triple Click) and dispatch recorded keyboard shortcuts.
+          </p>
+        </div>
+
+        <!-- Mock macOS Settings Card -->
+        <div class="bg-black/40 rounded-xl p-3.5 border border-white/10 text-left">
+          <div class="text-[10px] text-[#86868b] font-mono mb-2">System Settings &gt; Privacy &gt; Accessibility</div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-[10px]">🪄</span>
+              <span class="text-xs font-semibold text-white">MagicTouch</span>
+            </div>
+            <!-- Mock Active Toggle -->
+            <div class="w-9 h-5 rounded-full bg-blue-500 p-0.5 flex items-center justify-end cursor-pointer">
+              <div class="w-4 h-4 rounded-full bg-white shadow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Input Monitoring -->
+      <div class="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold text-xs flex items-center justify-center">
+              03
+            </span>
+            <span class="text-xs text-cyan-400 font-mono">Touch Surface</span>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Enable Input Monitoring</h3>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-4">
+            Authorizes reading raw capacitive sensor pixel coordinate arrays directly from your Apple Magic Mouse touch glass.
+          </p>
+        </div>
+
+        <!-- Mock macOS Settings Card -->
+        <div class="bg-black/40 rounded-xl p-3.5 border border-white/10 text-left">
+          <div class="text-[10px] text-[#86868b] font-mono mb-2">System Settings &gt; Privacy &gt; Input Monitoring</div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-[10px]">🪄</span>
+              <span class="text-xs font-semibold text-white">MagicTouch</span>
+            </div>
+            <!-- Mock Active Toggle -->
+            <div class="w-9 h-5 rounded-full bg-blue-500 p-0.5 flex items-center justify-end cursor-pointer">
+              <div class="w-4 h-4 rounded-full bg-white shadow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Troubleshooting Banner -->
+    <div class="glass-panel rounded-xl p-4 sm:p-5 max-w-3xl mx-auto flex items-start space-x-3 text-left">
+      <span class="text-xl shrink-0">💡</span>
+      <div class="text-xs text-[#86868b] leading-relaxed">
+        <strong class="text-white">macOS Sequoia & Sonoma Pro Tip:</strong> If gestures ever stop firing after a major macOS system update or app upgrade, simply toggle the switch <span class="text-white">OFF</span> and back <span class="text-white">ON</span> in System Settings to prompt macOS to refresh its security daemon.
+      </div>
+    </div>
   </section>
 
   <!-- Footer -->

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="mouseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4d4d8"/>
+    </linearGradient>
+    <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0071e3"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle (macOS App Icon Style) -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#070709" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+
+  <!-- Magic Mouse Body Silhouette -->
+  <rect x="20" y="12" width="24" height="42" rx="11" fill="url(#mouseGrad)" filter="url(#glow)"/>
+  
+  <!-- Subtle Center Seam Divider -->
+  <line x1="32" y1="16" x2="32" y2="28" stroke="#a1a1aa" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Capacitive Touch Point Glow -->
+  <circle cx="32" cy="22" r="3.5" fill="#0071e3"/>
+  <circle cx="32" cy="22" r="6" stroke="#38bdf8" stroke-width="1.2" opacity="0.8"/>
+
+  <!-- Magic Wand Sparkle 4-point Star -->
+  <path d="M46 10 C46 14 49 16 53 16 C49 16 46 18 46 22 C46 18 43 16 39 16 C43 16 46 14 46 10 Z" fill="url(#sparkleGrad)"/>
+</svg>
