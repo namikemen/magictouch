@@ -20,7 +20,7 @@ public final class UpdateChecker: NSObject, ObservableObject, URLSessionDownload
     }
 
     // Published state
-    @Published public var currentVersion: String = "1.0.0"
+    @Published public var currentVersion: String = "0.1.0"
     @Published public var isChecking: Bool = false
     @Published public var isUpdateAvailable: Bool = false
     @Published public var latestVersion: String = ""
@@ -91,11 +91,52 @@ public final class UpdateChecker: NSObject, ObservableObject, URLSessionDownload
                 self.isChecking = false
             }
 
-            guard let data = data,
+            if let error = error {
+                DispatchQueue.main.async {
+                    if manual {
+                        let nsErr = error as NSError
+                        if nsErr.domain == NSURLErrorDomain && nsErr.code == NSURLErrorNotConnectedToInternet {
+                            self.statusMessage = "No internet connection."
+                        } else {
+                            self.statusMessage = "Connection failed: \(error.localizedDescription)"
+                        }
+                    }
+                }
+                return
+            }
+
+            guard let data = data, let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    if manual {
+                        self.statusMessage = "No response from server."
+                    }
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 404 {
+                DispatchQueue.main.async {
+                    if manual {
+                        self.statusMessage = "No releases published yet on GitHub."
+                    }
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 403 {
+                DispatchQueue.main.async {
+                    if manual {
+                        self.statusMessage = "GitHub API rate limit reached. Try later."
+                    }
+                }
+                return
+            }
+
+            guard (200...299).contains(httpResponse.statusCode),
                   let release = try? JSONDecoder().decode(GitHubRelease.self, from: data) else {
                 DispatchQueue.main.async {
                     if manual {
-                        self.statusMessage = "Could not reach update server."
+                        self.statusMessage = "Unable to read release metadata."
                     }
                 }
                 return

@@ -41,7 +41,6 @@ swiftc -target arm64-apple-macos13.0 \
   -parse-as-library \
   -sdk "$SDK_PATH" \
   -module-cache-path "$CACHE_DIR/module" \
-  -sdk-module-cache-path "$CACHE_DIR/sdk" \
   -Xcc -fmodules-cache-path="$CACHE_DIR/clang" \
   -F /System/Library/PrivateFrameworks \
   -framework MultitouchSupport \
@@ -66,7 +65,6 @@ swiftc -target x86_64-apple-macos13.0 \
   -parse-as-library \
   -sdk "$SDK_PATH" \
   -module-cache-path "$CACHE_DIR/module" \
-  -sdk-module-cache-path "$CACHE_DIR/sdk" \
   -Xcc -fmodules-cache-path="$CACHE_DIR/clang" \
   -F /System/Library/PrivateFrameworks \
   -framework MultitouchSupport \

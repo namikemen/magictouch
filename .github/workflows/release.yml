@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: 'Version tag to release (e.g. v1.0.0)'
+        description: 'Version tag to release (e.g. v0.1.0)'
         required: false
-        default: 'v1.0.0'
+        default: 'v0.1.0'
 
 permissions:
   contents: write
@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set Release Version
         id: version
@@ -61,6 +63,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set Release Version
         id: version
@@ -81,10 +85,18 @@ jobs:
           path: dist
 
       - name: Assemble latest.json Updater Manifest
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
-          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          # Extract git tag annotation or commit message
+          TAG_MSG=$(git tag -l --format='%(contents)' "$TAG" 2>/dev/null | sed '/^[[:space:]]*$/d')
+          if [ -z "$TAG_MSG" ]; then
+            TAG_MSG=$(git log -1 --pretty=%B "$TAG" 2>/dev/null | head -n 5 || echo "MagicTouch $TAG release")
+          fi
+          export TAG_MSG
+          export PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           TAR_SHA=$(sha256sum dist/MagicTouch.app.tar.gz 2>/dev/null | awk '{print $1}' || echo "")
           ZIP_SHA=$(sha256sum dist/MagicTouch-macOS.zip 2>/dev/null | awk '{print $1}' || echo "")
@@ -92,32 +104,49 @@ jobs:
           if [ -f dist/MagicTouch.dmg ]; then
             DMG_SHA=$(sha256sum dist/MagicTouch.dmg | awk '{print $1}')
           fi
+          export TAR_SHA ZIP_SHA DMG_SHA
 
-          cat <<EOF > dist/latest.json
-          {
-            "version": "$VERSION",
-            "notes": "MagicTouch $TAG release",
-            "pub_date": "$PUB_DATE",
-            "platforms": {
-              "darwin-universal": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch.app.tar.gz",
-                "signature": "$TAR_SHA"
-              },
-              "dmg": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch.dmg",
-                "signature": "$DMG_SHA"
-              },
-              "zip": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/MagicTouch-macOS.zip",
-                "signature": "$ZIP_SHA"
+          python3 - << 'PY_EOF'
+          import json, os
+
+          tag = os.environ["TAG"]
+          version = os.environ["VERSION"]
+          repo = os.environ["REPO"]
+          notes = os.environ.get("TAG_MSG", f"MagicTouch {tag} release").strip()
+          pub_date = os.environ["PUB_DATE"]
+          tar_sha = os.environ.get("TAR_SHA", "")
+          zip_sha = os.environ.get("ZIP_SHA", "")
+          dmg_sha = os.environ.get("DMG_SHA", "")
+
+          data = {
+              "version": version,
+              "notes": notes,
+              "pub_date": pub_date,
+              "platforms": {
+                  "darwin-universal": {
+                      "url": f"https://github.com/{repo}/releases/download/{tag}/MagicTouch.app.tar.gz",
+                      "signature": tar_sha
+                  },
+                  "dmg": {
+                      "url": f"https://github.com/{repo}/releases/download/{tag}/MagicTouch.dmg",
+                      "signature": dmg_sha
+                  },
+                  "zip": {
+                      "url": f"https://github.com/{repo}/releases/download/{tag}/MagicTouch-macOS.zip",
+                      "signature": zip_sha
+                  }
               }
-            }
           }
-          EOF
+
+          with open("dist/latest.json", "w") as f:
+              json.dump(data, f, indent=2)
+
+          print("Generated latest.json:")
+          print(json.dumps(data, indent=2))
+          PY_EOF
 
           # Refresh checksums including latest.json
           (cd dist && sha256sum * > checksums.txt)
-          cat dist/latest.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
