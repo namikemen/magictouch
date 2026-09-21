@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MagicTouch 🪄🖱️ — Ultra-Responsive Magic Mouse Gestures for macOS</title>
+  
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="MagicTouch — Ultra-Responsive Magic Mouse Gestures for macOS">
+  <meta name="description" content="A native macOS menu bar utility for Apple Magic Mouse bringing custom multi-touch gestures, middle click, pinches, and hotkey bindings with sub-millisecond latency.">
+  <meta name="author" content="namikemen">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://namikemen.github.io/magictouch/">
+  <meta property="og:title" content="MagicTouch — Custom Multi-Touch Gestures for Magic Mouse">
+  <meta property="og:description" content="Native macOS utility intercepting raw hardware multi-touch frames. 30+ gestures: middle click, tip-taps, pinches, and hotkeys.">
+  <meta property="og:image" content="https://namikemen.github.io/magictouch/assets/preview.png">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://namikemen.github.io/magictouch/">
+  <meta property="twitter:title" content="MagicTouch — Custom Multi-Touch Gestures for Magic Mouse">
+  <meta property="twitter:description" content="Native macOS utility intercepting raw hardware multi-touch frames. 30+ gestures: middle click, tip-taps, pinches, and hotkeys.">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#070709',
+            surface: '#0f0f14',
+            accentBlue: '#0071e3',
+            accentCyan: '#38bdf8',
+            accentPurple: '#a855f7'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Glassmorphism Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-[#070709] text-[#f5f5f7] min-h-screen relative selection:bg-accentBlue selection:text-white">
+
+  <!-- Ambient Radial Glow Background -->
+  <div class="radial-glow-bg"></div>
+
+  <!-- Floating Glassmorphic Navigation Bar -->
+  <header class="sticky top-4 z-50 mx-auto max-w-5xl px-4 sm:px-6">
+    <nav class="glass-pill rounded-full px-5 py-3 flex items-center justify-between transition-all duration-300">
+      
+      <!-- Brand Logo & Name -->
+      <a href="#" class="flex items-center space-x-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="3" width="12" height="18" rx="6"/>
+            <line x1="12" y1="7" x2="12" y2="11"/>
+          </svg>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="font-bold tracking-tight text-white text-base">MagicTouch</span>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">macOS</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <div class="hidden md:flex items-center space-x-7 text-sm font-medium text-[#98989f]">
+        <a href="#features" class="hover:text-white transition-colors">Features</a>
+        <a href="#simulator" class="hover:text-white transition-colors">Simulator</a>
+        <a href="#gestures" class="hover:text-white transition-colors">Gesture Matrix</a>
+        <a href="#installation" class="hover:text-white transition-colors">Install Guide</a>
+      </div>
+
+      <!-- Right Quick Actions (GitHub Star + Download CTA) -->
+      <div class="hidden sm:flex items-center space-x-3">
+        <a href="https://github.com/namikemen/magictouch" target="_blank" rel="noopener" class="px-3.5 py-1.5 rounded-full text-xs font-medium text-[#d1d1d6] bg-white/5 hover:bg-white/10 border border-white/10 flex items-center space-x-1.5 transition-all">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>Star</span>
+        </a>
+        <a href="#download" class="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-accentBlue hover:bg-blue-600 shadow-sm shadow-blue-500/25 transition-all">
+          Download
+        </a>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button id="mobile-menu-btn" class="md:hidden text-[#98989f] hover:text-white p-1" aria-label="Toggle Navigation">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </nav>
+
+    <!-- Mobile Slide-Down Drawer -->
+    <div id="mobile-menu" class="hidden md:hidden mt-2 glass-panel rounded-2xl p-4 transition-all duration-300">
+      <div class="flex flex-col space-y-3 text-sm font-medium text-[#d1d1d6]">
+        <a href="#features" class="mobile-nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">Features</a>
+        <a href="#simulator" class="mobile-nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">Simulator</a>
+        <a href="#gestures" class="mobile-nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">Gesture Matrix</a>
+        <a href="#installation" class="mobile-nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">Install Guide</a>
+        <div class="pt-2 border-t border-white/10 flex items-center justify-between">
+          <a href="https://github.com/namikemen/magictouch" target="_blank" rel="noopener" class="text-xs text-[#98989f] hover:text-white flex items-center space-x-1.5">
+            <span>View on GitHub</span>
+          </a>
+          <a href="#download" class="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-accentBlue hover:bg-blue-600">
+            Download .DMG
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Hero Section -->
+  <section id="hero" class="relative pt-16 pb-20 md:pt-24 md:pb-28 px-4 sm:px-6 max-w-6xl mx-auto text-center z-10">
+    
+    <!-- Platform Status Badges Row -->
+    <div class="inline-flex flex-wrap items-center justify-center gap-2 mb-8 animate-float">
+      <span class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-blue-300 flex items-center space-x-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+        <span>⚡ Universal Binary (Apple Silicon & Intel)</span>
+      </span>
+      <span class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-emerald-300 flex items-center space-x-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+        <span>🖥️ macOS 13+ Ventura / Sonoma / Sequoia</span>
+      </span>
+      <span class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-purple-300 flex items-center space-x-1.5">
+        <span>🔒 Zero Telemetry • 100% Local</span>
+      </span>
+      <span id="release-version-badge" class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-cyan-300 flex items-center space-x-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+        <span id="badge-version-text">v0.1.1 Released</span>
+      </span>
+    </div>
+
+    <!-- Hero Headline & Hook -->
+    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]">
+      Unleash Your <span class="text-gradient-accent">Magic Mouse</span>
+    </h1>
+
+    <p class="text-lg sm:text-xl text-[#98989f] max-w-2xl mx-auto mb-10 leading-relaxed">
+      Ultra-responsive custom multi-touch gestures, middle click, pinches, and hotkey bindings for macOS with sub-millisecond latency.
+    </p>
+
+    <!-- Download CTA Container (Wired in Plan 01-02) -->
+    <div id="download-cta-container" class="mb-14">
+      <!-- Plan 01-02 inserts primary button, secondary buttons, terminal snippet, and trust footnote here -->
+    </div>
+
+    <!-- Floating Native macOS Popover Preview Card -->
+    <div class="relative max-w-2xl mx-auto mt-6">
+      <div class="glass-panel specular-rim rounded-2xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden border border-white/10">
+        
+        <!-- Window Chrome Controls -->
+        <div class="flex items-center justify-between pb-5 border-b border-white/10 mb-6">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-[#ff5f56]/90 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-[#ffbd2e]/90 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-[#27c93f]/90 inline-block"></span>
+            <span class="text-xs text-[#86868b] font-mono ml-2">MagicTouch.app — Status Popover</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-emerald-400 font-medium flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Active</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Mockup Content Replicating MainPopoverView -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+          
+          <!-- Left Mini Visualizer Frame -->
+          <div class="sm:col-span-5 bg-[#09090d] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center relative min-h-[170px]">
+            <div class="w-20 h-32 rounded-3xl border-2 border-dashed border-blue-500/40 relative flex items-center justify-center bg-blue-500/5">
+              <!-- Animated contact touch dots -->
+              <div class="absolute top-8 left-3 w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/80 animate-ping"></div>
+              <div class="absolute top-8 left-3 w-3.5 h-3.5 rounded-full bg-cyan-400"></div>
+
+              <div class="absolute top-8 left-8 w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/80 animate-ping"></div>
+              <div class="absolute top-8 left-8 w-3.5 h-3.5 rounded-full bg-cyan-400"></div>
+
+              <div class="absolute top-8 right-3 w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/80 animate-ping"></div>
+              <div class="absolute top-8 right-3 w-3.5 h-3.5 rounded-full bg-cyan-400"></div>
+
+              <span class="text-[9px] text-[#86868b] font-mono mt-12">3 Touches</span>
+            </div>
+            <div class="mt-3 text-[10px] text-blue-400 font-mono tracking-wide">SURFACE: 1000Hz</div>
+          </div>
+
+          <!-- Right Details Column -->
+          <div class="sm:col-span-7 flex flex-col justify-center space-y-3.5">
+            <div>
+              <div class="text-xs text-[#86868b] uppercase tracking-wider font-semibold">Device Status</div>
+              <div class="text-sm font-medium text-white flex items-center space-x-1.5 mt-0.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Apple Magic Mouse (Connected)</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-xs text-[#86868b] uppercase tracking-wider font-semibold">Detected Gesture</div>
+              <div class="text-sm font-semibold text-accentCyan mt-0.5 flex items-center space-x-2">
+                <span>3-Finger Click</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-normal">Middle Click (Button 3)</span>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-[#86868b]">
+              <span>Private Framework Interception</span>
+              <span class="text-emerald-400 font-mono">0.4ms latency</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Placeholder Sections for Subsequent Phases -->
+  <section id="features" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
+    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Engineered for Apple Silicon & macOS</h2>
+    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Private framework hooks, sub-millisecond latency, and native SwiftUI popover.</p>
+  </section>
+
+  <section id="simulator" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
+    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Interactive Mouse Playground</h2>
+    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Try multi-touch gestures directly on the virtual surface below (built in Phase 2).</p>
+  </section>
+
+  <section id="gestures" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
+    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">30+ Gesture Combinations</h2>
+    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">From middle click to tip-taps and pinches (built in Phase 3).</p>
+  </section>
+
+  <section id="installation" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
+    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">Quick Installation & Permissions</h2>
+    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Simple DMG drag-and-drop with macOS Accessibility setup (built in Phase 3).</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-12 px-4 text-center text-xs text-[#86868b] relative z-10">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-2">
+        <span class="font-semibold text-white">MagicTouch</span>
+        <span>• Native macOS Multitouch Utility</span>
+      </div>
+      <div>
+        Released under the <a href="https://github.com/namikemen/magictouch/blob/main/LICENSE" target="_blank" rel="noopener" class="text-blue-400 hover:underline">MIT License</a>.
+      </div>
+      <div class="flex items-center space-x-4">
+        <a href="https://github.com/namikemen/magictouch" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+        <a href="https://github.com/namikemen/magictouch/releases" target="_blank" rel="noopener" class="hover:text-white transition-colors">Releases</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
