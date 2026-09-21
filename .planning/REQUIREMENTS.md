@@ -7,16 +7,16 @@
 
 ### Design & Glassmorphism (DSGN)
 
-- [ ] **DSGN-01**: User experiences a cohesive dark-mode glassmorphic interface with frosted glass panels, translucent borders, and subtle glow accents matching macOS aesthetics.
-- [ ] **DSGN-02**: User can navigate smoothly between page sections using a sticky glassmorphic navigation bar with blurred backdrop and responsive mobile drawer.
-- [ ] **DSGN-03**: Layout adapts responsively across mobile, tablet, and high-DPI desktop viewports without overflow or clipping.
+- [x] **DSGN-01**: User experiences a cohesive dark-mode glassmorphic interface with frosted glass panels, translucent borders, and subtle glow accents matching macOS aesthetics.
+- [x] **DSGN-02**: User can navigate smoothly between page sections using a sticky glassmorphic navigation bar with blurred backdrop and responsive mobile drawer.
+- [x] **DSGN-03**: Layout adapts responsively across mobile, tablet, and high-DPI desktop viewports without overflow or clipping.
 
 ### Hero & Downloads (HERO)
 
-- [ ] **HERO-01**: User sees a high-impact headline, product summary badge, and platform specifications (Apple Silicon & Intel Universal, macOS 13+ Ventura/Sonoma/Sequoia).
-- [ ] **HERO-02**: User can click the primary "Download for macOS" CTA to download the latest `MagicTouch.dmg` installer directly from GitHub Releases.
-- [ ] **HERO-03**: Page asynchronously queries GitHub Releases to display the latest release tag (e.g. `v0.1.0`) and asset details with instant static fallback.
-- [ ] **HERO-04**: User can copy a terminal command snippet for one-click installation or repository cloning.
+- [x] **HERO-01**: User sees a high-impact headline, product summary badge, and platform specifications (Apple Silicon & Intel Universal, macOS 13+ Ventura/Sonoma/Sequoia).
+- [x] **HERO-02**: User can click the primary "Download for macOS" CTA to download the latest `MagicTouch.dmg` installer directly from GitHub Releases.
+- [x] **HERO-03**: Page asynchronously queries GitHub Releases to display the latest release tag (e.g. `v0.1.0`) and asset details with instant static fallback.
+- [x] **HERO-04**: User can copy a terminal command snippet for one-click installation or repository cloning.
 
 ### Interactive Magic Mouse Simulator (SIM)
 
@@ -65,13 +65,13 @@ Which phases cover which requirements. (Populated during roadmap creation).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DSGN-01 | Phase 1 | Pending |
-| DSGN-02 | Phase 1 | Pending |
-| DSGN-03 | Phase 1 | Pending |
-| HERO-01 | Phase 1 | Pending |
-| HERO-02 | Phase 1 | Pending |
-| HERO-03 | Phase 1 | Pending |
-| HERO-04 | Phase 1 | Pending |
+| DSGN-01 | Phase 1 | Complete |
+| DSGN-02 | Phase 1 | Complete |
+| DSGN-03 | Phase 1 | Complete |
+| HERO-01 | Phase 1 | Complete |
+| HERO-02 | Phase 1 | Complete |
+| HERO-03 | Phase 1 | Complete |
+| HERO-04 | Phase 1 | Complete |
 | SIM-01  | Phase 2 | Pending |
 | SIM-02  | Phase 2 | Pending |
 | SIM-03  | Phase 2 | Pending |
