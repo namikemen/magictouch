@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 /// Manages loading, saving, and updating user gesture configurations
 public final class ConfigurationStore: ObservableObject {
@@ -50,7 +51,11 @@ public final class ConfigurationStore: ObservableObject {
     }
 
     public func deleteMapping(at offsets: IndexSet) {
-        mappings.remove(atOffsets: offsets)
+        for index in offsets.sorted(by: >) {
+            if index < mappings.count {
+                mappings.remove(at: index)
+            }
+        }
         save()
     }
 
