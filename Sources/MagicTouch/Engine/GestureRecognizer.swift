@@ -30,6 +30,7 @@ public final class GestureRecognizer {
     // Tracking active touch paths
     private var initialTouches: [Int: TouchPoint] = [:]
     private var currentTouches: [Int: TouchPoint] = [:]
+    private var lastKnownTouches: [Int: TouchPoint] = [:]
     private var touchDownTimes: [Int: Double] = [:]
     private var touchPositionsAtTapDown: [Int: TouchPoint] = [:]
     private var suppressedTouchIds: Set<Int> = []
@@ -100,6 +101,7 @@ public final class GestureRecognizer {
                     delegate?.gestureRecognizerDidDetect(gesture: pending.gesture)
                     suppressedTouchIds.insert(pending.restingId)
                     initialTouches.removeValue(forKey: pending.liftedId)
+                    lastKnownTouches.removeValue(forKey: pending.liftedId)
                     touchDownTimes.removeValue(forKey: pending.liftedId)
                     touchPositionsAtTapDown.removeValue(forKey: pending.liftedId)
                     maxSimultaneousFingers = 1
@@ -112,6 +114,11 @@ public final class GestureRecognizer {
         }
 
         if activeFingers > 0 {
+            // Keep persistent record of the most recent coordinate of every touch in this session
+            for t in touches {
+                lastKnownTouches[t.id] = t
+            }
+
             if initialTouches.isEmpty {
                 // New gesture session began
                 touchStartTime = timestamp
@@ -182,6 +189,7 @@ public final class GestureRecognizer {
                             delegate?.gestureRecognizerDidDetect(gesture: gesture)
                             suppressedTouchIds.insert(restingTouch.id)
                             initialTouches.removeValue(forKey: liftedId)
+                            lastKnownTouches.removeValue(forKey: liftedId)
                             touchDownTimes.removeValue(forKey: liftedId)
                             touchPositionsAtTapDown.removeValue(forKey: liftedId)
                             maxSimultaneousFingers = 1
@@ -220,6 +228,7 @@ public final class GestureRecognizer {
                 }
                 initialTouches.removeAll()
                 currentTouches.removeAll()
+                lastKnownTouches.removeAll()
                 touchDownTimes.removeAll()
                 touchPositionsAtTapDown.removeAll()
                 suppressedTouchIds.removeAll()
@@ -237,13 +246,13 @@ public final class GestureRecognizer {
     private func evaluateCompletedGesture(duration: Double, timestamp: Double) {
         let fingerCount = maxSimultaneousFingers
 
-        // Calculate average displacement across fingers
+        // Calculate average displacement across fingers, using lastKnownTouches for lifted fingers
         var totalDx: Float = 0
         var totalDy: Float = 0
         var count: Float = 0
 
         for (id, initial) in initialTouches {
-            if let final = currentTouches[id] ?? initialTouches[id] {
+            if let final = lastKnownTouches[id] ?? currentTouches[id] ?? initialTouches[id] {
                 let dx = (final.x - initial.x)
                 let dy = (final.y - initial.y)
                 totalDx += dx
@@ -262,8 +271,8 @@ public final class GestureRecognizer {
             if sorted.count == 2 {
                 let leftInit = sorted[0]
                 let rightInit = sorted[1]
-                let leftFinal = currentTouches[leftInit.id] ?? leftInit
-                let rightFinal = currentTouches[rightInit.id] ?? rightInit
+                let leftFinal = lastKnownTouches[leftInit.id] ?? currentTouches[leftInit.id] ?? leftInit
+                let rightFinal = lastKnownTouches[rightInit.id] ?? currentTouches[rightInit.id] ?? rightInit
 
                 let leftDx = leftFinal.x - leftInit.x
                 let rightDx = rightFinal.x - rightInit.x
@@ -275,46 +284,78 @@ public final class GestureRecognizer {
                 let centroidTranslation = hypot(avgDx, avgDy)
                 let spreadDelta = minSpreadDelta
 
-                // SWIPE LEFT:
-                // Hand translated left. Trailing finger (right) moved left. Leading finger (left) did NOT move right.
-                // Spread change was not a massive convergence dominating the translation.
-                if avgDx <= -0.065 && rightDx <= -0.05 && leftDx <= 0.025 && abs(avgDx) > abs(avgDy) && (abs(spreadDelta) < abs(avgDx) * 1.35) {
-                    dispatchSwipe(fingerCount: 2, direction: .left)
-                    return
-                }
-
-                // SWIPE RIGHT:
-                // Hand translated right. Trailing finger (left) moved right. Leading finger (right) did NOT move left.
-                if avgDx >= 0.065 && leftDx >= 0.05 && rightDx >= -0.025 && abs(avgDx) > abs(avgDy) && (abs(spreadDelta) < abs(avgDx) * 1.35) {
-                    dispatchSwipe(fingerCount: 2, direction: .right)
-                    return
-                }
-
-                // SWIPE UP:
-                if avgDy >= 0.065 && leftDy >= 0.025 && rightDy >= 0.025 && abs(avgDy) >= abs(avgDx) {
-                    dispatchSwipe(fingerCount: 2, direction: .up)
-                    return
-                }
-
-                // SWIPE DOWN:
-                if avgDy <= -0.065 && leftDy <= -0.025 && rightDy <= -0.025 && abs(avgDy) >= abs(avgDx) {
-                    dispatchSwipe(fingerCount: 2, direction: .down)
-                    return
-                }
-
-                // PINCH IN:
-                // Spread narrowed by >= pinchMinDelta, fingers converged towards each other,
-                // or one finger remained anchored while the other closed inward (spread change >> translation)
-                let isConverging = (leftDx > -0.015 && rightDx < 0.015) || (leftDx * rightDx < 0)
-                let isAsymmetricalPinch = (abs(spreadDelta) >= centroidTranslation * 1.5) && (abs(leftDx) <= 0.03 || abs(rightDx) <= 0.03)
-                if spreadDelta <= -pinchMinDelta && (isConverging || isAsymmetricalPinch) && (centroidTranslation < 0.06 || isAsymmetricalPinch) {
+                // --- 2-FINGER PINCH IN ---
+                // Convergence requirements:
+                // 1. Symmetric pinch: both fingers move toward each other (left moves right, right moves left).
+                let isSymmetricPinchIn = (leftDx >= 0.020 && rightDx <= -0.020)
+                
+                // 2. Left finger anchored: left finger remains still while right finger sweeps inward.
+                let isLeftAnchoredPinchIn = (leftDx >= -0.015) &&
+                                           (hypot(leftDx, leftDy) <= 0.028) &&
+                                           (rightDx <= -0.065) &&
+                                           (abs(spreadDelta) >= centroidTranslation * 1.35)
+                
+                // 3. Right finger anchored: right finger remains still while left finger sweeps inward.
+                let isRightAnchoredPinchIn = (rightDx <= 0.015) &&
+                                            (hypot(rightDx, rightDy) <= 0.028) &&
+                                            (leftDx >= 0.065) &&
+                                            (abs(spreadDelta) >= centroidTranslation * 1.35)
+                
+                if spreadDelta <= -pinchMinDelta && (isSymmetricPinchIn || isLeftAnchoredPinchIn || isRightAnchoredPinchIn) {
                     delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchIn)
                     return
                 }
 
-                // PINCH OUT:
-                if maxSpreadDelta >= pinchMinDelta && centroidTranslation < 0.09 {
+                // --- 2-FINGER PINCH OUT ---
+                // Spreading requirements:
+                let isSymmetricPinchOut = (leftDx <= -0.020 && rightDx >= 0.020)
+                let isLeftAnchoredPinchOut = (leftDx <= 0.015) &&
+                                            (hypot(leftDx, leftDy) <= 0.028) &&
+                                            (rightDx >= 0.065) &&
+                                            (abs(maxSpreadDelta) >= centroidTranslation * 1.35)
+                let isRightAnchoredPinchOut = (rightDx >= -0.015) &&
+                                             (hypot(rightDx, rightDy) <= 0.028) &&
+                                             (leftDx <= -0.065) &&
+                                             (abs(maxSpreadDelta) >= centroidTranslation * 1.35)
+
+                if maxSpreadDelta >= pinchMinDelta && (isSymmetricPinchOut || isLeftAnchoredPinchOut || isRightAnchoredPinchOut) {
                     delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchOut)
+                    return
+                }
+
+                // --- 2-FINGER SWIPE LEFT ---
+                // Parallel translation to the left:
+                // 1. Leading finger (left) moved left (or stayed at left edge if started at x <= 0.22)
+                let isLeftFingerMovingLeft = (leftDx <= -0.025) || (leftInit.x <= 0.22 && leftDx <= 0.005)
+                // 2. Trailing finger (right) moved left
+                let isRightFingerMovingLeft = (rightDx <= -0.045)
+                // 3. Overall motion is leftward and predominantly horizontal
+                let isOverallSwipeLeft = (avgDx <= -0.055) && (abs(avgDx) > abs(avgDy))
+
+                if isLeftFingerMovingLeft && isRightFingerMovingLeft && isOverallSwipeLeft {
+                    dispatchSwipe(fingerCount: 2, direction: .left)
+                    return
+                }
+
+                // --- 2-FINGER SWIPE RIGHT ---
+                let isRightFingerMovingRight = (rightDx >= 0.025) || (rightInit.x >= 0.78 && rightDx >= -0.005)
+                let isLeftFingerMovingRight = (leftDx >= 0.045)
+                let isOverallSwipeRight = (avgDx >= 0.055) && (abs(avgDx) > abs(avgDy))
+
+                if isLeftFingerMovingRight && isRightFingerMovingRight && isOverallSwipeRight {
+                    dispatchSwipe(fingerCount: 2, direction: .right)
+                    return
+                }
+
+                // --- 2-FINGER SWIPE UP ---
+                if avgDy >= 0.060 && leftDy >= 0.025 && rightDy >= 0.025 && abs(avgDy) >= abs(avgDx) {
+                    dispatchSwipe(fingerCount: 2, direction: .up)
+                    return
+                }
+
+                // --- 2-FINGER SWIPE DOWN ---
+                if avgDy <= -0.060 && leftDy <= -0.025 && rightDy <= -0.025 && abs(avgDy) >= abs(avgDx) {
+                    dispatchSwipe(fingerCount: 2, direction: .down)
                     return
                 }
             }

@@ -89,6 +89,58 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .twoFingerSwipeLeft, "Detected 2-finger swipe left rather than false pinch in")
     }
 
+    func testTwoFingerSwipeLeftWithAsynchronousFingerLiftNotPinchIn() {
+        print("Running: Two Finger Swipe Left with Asynchronous Finger Lift (not Pinch In)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+
+        // User starts swipe with 2 fingers
+        recognizer.processFrame(touches: [
+            TouchPoint(id: 1, x: 0.45, y: 0.50),
+            TouchPoint(id: 2, x: 0.75, y: 0.50)
+        ], timestamp: 2.0)
+
+        // Mid-swipe: both fingers moving left
+        recognizer.processFrame(touches: [
+            TouchPoint(id: 1, x: 0.22, y: 0.50),
+            TouchPoint(id: 2, x: 0.46, y: 0.50)
+        ], timestamp: 2.15)
+
+        // Asynchronous release: index finger (touch 1) lifts 20ms before middle finger (touch 2)
+        recognizer.processFrame(touches: [
+            TouchPoint(id: 2, x: 0.43, y: 0.50)
+        ], timestamp: 2.17)
+
+        // Trailing finger lifts
+        recognizer.processFrame(touches: [], timestamp: 2.20)
+
+        assertEqual(lastDetectedGesture, .twoFingerSwipeLeft, "Asynchronous finger lift correctly evaluated as swipe left, not pinch in")
+    }
+
+    func testTwoFingerSwipeLeftNearLeftEdgeNotPinchIn() {
+        print("Running: Two Finger Swipe Left Starting Near Left Edge (not Pinch In)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+
+        // Leading finger starts near left curved edge
+        recognizer.processFrame(touches: [
+            TouchPoint(id: 1, x: 0.18, y: 0.50),
+            TouchPoint(id: 2, x: 0.52, y: 0.50)
+        ], timestamp: 3.0)
+
+        // Leading finger reaches physical edge (dx = -0.05), trailing finger sweeps (dx = -0.26)
+        // Spread compresses drastically from 0.34 to 0.13 (delta = -0.21)
+        recognizer.processFrame(touches: [
+            TouchPoint(id: 1, x: 0.13, y: 0.50),
+            TouchPoint(id: 2, x: 0.26, y: 0.50)
+        ], timestamp: 3.15)
+        recognizer.processFrame(touches: [], timestamp: 3.20)
+
+        assertEqual(lastDetectedGesture, .twoFingerSwipeLeft, "Heavy finger compression near edge recognized as swipe left, not pinch in")
+    }
+
     func testOneFingerLongRestNotTap() {
         print("Running: 1-Finger Long Resting Finger Lift (must NOT trigger tap)...")
         let recognizer = GestureRecognizer()
@@ -575,6 +627,8 @@ struct RunnerApp {
         runner.testThreeFingerTapDetection()
         runner.testTwoFingerSwipeRightDetection()
         runner.testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn()
+        runner.testTwoFingerSwipeLeftWithAsynchronousFingerLiftNotPinchIn()
+        runner.testTwoFingerSwipeLeftNearLeftEdgeNotPinchIn()
         runner.testOneFingerLongRestNotTap()
         runner.testOneFingerDriftNotTap()
         runner.testTwoFingerPinchInDetection()
@@ -589,6 +643,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 25 MagicTouch test suites passed successfully!")
+        print("🎉 All 27 MagicTouch test suites passed successfully!")
     }
 }
