@@ -7,7 +7,7 @@ Build a modern, responsive, dark-mode glassmorphic showcase website and interact
 ## Phases
 
 - [x] **Phase 1: Design System, Layout & Hero Showcase** - Zero-build `docs/` foundation, glassmorphic styling, responsive layout, and GitHub Releases download CTA.
-- [ ] **Phase 2: Interactive Magic Mouse Canvas Simulator** - Virtual mouse surface, real-time capacitive touch visualization, gesture tour playback, and Web Audio haptic feedback.
+- [x] **Phase 2: Interactive Magic Mouse Canvas Simulator** - Virtual mouse surface, real-time capacitive touch visualization, gesture tour playback, and Web Audio haptic feedback.
 - [ ] **Phase 3: Gesture Matrix, Installation Guide & GitHub Pages Readiness** - 30+ gesture matrix, action targets, macOS permission walkthrough, and GitHub Pages deployment verification.
 
 ## Phase Details
@@ -40,8 +40,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Build the Canvas-based virtual mouse surface (`simulator.js`), Retina scaling, touch coordinate tracking, and gesture state machine.
-- [ ] 02-02: Build the procedural Web Audio feedback engine (`audio.js`), tour preset player, and real-time recognition badges.
+- [x] 02-01: Build the Canvas-based virtual mouse surface (`simulator.js`), Retina scaling, touch coordinate tracking, and gesture state machine.
+- [x] 02-02: Build the procedural Web Audio feedback engine (`audio.js`), tour preset player, and real-time recognition badges.
 
 ---
 
@@ -67,7 +67,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Design System, Layout & Hero Showcase | 2/2 | Complete | 2026-09-21 |
-| 2. Interactive Magic Mouse Canvas Simulator | 0/2 | Not started | - |
+| 2. Interactive Magic Mouse Canvas Simulator | 2/2 | Complete | 2026-09-21 |
 | 3. Gesture Matrix, Installation Guide & GitHub Pages Readiness | 0/2 | Not started | - |
 
 ---

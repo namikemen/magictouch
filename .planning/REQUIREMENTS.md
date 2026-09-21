@@ -19,12 +19,12 @@
 - [x] **HERO-04**: User can copy a terminal command snippet for one-click installation or repository cloning.
 
 ### Interactive Magic Mouse Simulator (SIM)
-
-- [ ] **SIM-01**: User can view a sleek virtual mockup of the Apple Magic Mouse capacitive surface rendered with crisp Retina scaling.
-- [ ] **SIM-02**: User can interact directly with the virtual mouse surface via mouse or touch to see live glowing capacitive contact points matching the app's `TouchPoint` model.
-- [ ] **SIM-03**: User can click preset gesture tour buttons (3-Finger Click, Tip-Tap Right, Pinch In, 2-Finger Swipe) to watch automated fingertip playback.
-- [ ] **SIM-04**: Simulator displays real-time "Recognized Gesture" and "Simulated Action" feedback badges upon gesture detection.
-- [ ] **SIM-05**: User can toggle synthesized procedural audio haptics (mechanical clicks and taps via Web Audio API) on and off.
+ 
+- [x] **SIM-01**: User can view a sleek virtual mockup of the Apple Magic Mouse capacitive surface rendered with crisp Retina scaling.
+- [x] **SIM-02**: User can interact directly with the virtual mouse surface via mouse or touch to see live glowing capacitive contact points matching the app's `TouchPoint` model.
+- [x] **SIM-03**: User can click preset gesture tour buttons (3-Finger Click, Tip-Tap Right, Pinch In, 2-Finger Swipe) to watch automated fingertip playback.
+- [x] **SIM-04**: Simulator displays real-time "Recognized Gesture" and "Simulated Action" feedback badges upon gesture detection.
+- [x] **SIM-05**: User can toggle synthesized procedural audio haptics (mechanical clicks and taps via Web Audio API) on and off.
 
 ### Gesture Matrix & Actions (MTRX)
 
@@ -72,11 +72,11 @@ Which phases cover which requirements. (Populated during roadmap creation).
 | HERO-02 | Phase 1 | Complete |
 | HERO-03 | Phase 1 | Complete |
 | HERO-04 | Phase 1 | Complete |
-| SIM-01  | Phase 2 | Pending |
-| SIM-02  | Phase 2 | Pending |
-| SIM-03  | Phase 2 | Pending |
-| SIM-04  | Phase 2 | Pending |
-| SIM-05  | Phase 2 | Pending |
+| SIM-01  | Phase 2 | Complete |
+| SIM-02  | Phase 2 | Complete |
+| SIM-03  | Phase 2 | Complete |
+| SIM-04  | Phase 2 | Complete |
+| SIM-05  | Phase 2 | Complete |
 | MTRX-01 | Phase 3 | Pending |
 | MTRX-02 | Phase 3 | Pending |
 | MTRX-03 | Phase 3 | Pending |
