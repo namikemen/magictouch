@@ -418,10 +418,136 @@
     <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">Private framework hooks, sub-millisecond latency, and native SwiftUI popover.</p>
   </section>
 
-  <!-- Gestures Section -->
-  <section id="gestures" class="py-20 px-4 max-w-6xl mx-auto text-center border-t border-white/5">
-    <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">30+ Gesture Combinations</h2>
-    <p class="text-sm sm:text-base text-[#98989f] max-w-xl mx-auto">From middle click to tip-taps and pinches (built in Phase 3).</p>
+  <!-- Gestures Section: Filterable Matrix & Action Targets -->
+  <section id="gestures" class="py-24 px-4 max-w-6xl mx-auto border-t border-white/5 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+        <span>Gesture Catalog</span>
+      </div>
+      <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+        Over 40 Gestures. <span class="text-gradient-accent">Infinite Possibilities.</span>
+      </h2>
+      <p class="text-sm sm:text-base text-[#98989f] leading-relaxed">
+        From essential 3-finger middle clicks to complex 4-finger spaces navigation, MagicTouch turns the entire glass top into an ultra-responsive gesture trackpad.
+      </p>
+    </div>
+
+    <!-- Filters Bar & Search -->
+    <div class="glass-panel rounded-2xl p-4 sm:p-6 mb-8 max-w-5xl mx-auto">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Category Filter Buttons -->
+        <div class="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-2">
+          <button data-filter="all" class="matrix-filter-btn active px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/90 border-blue-500/60 text-blue-400">
+            All (41)
+          </button>
+          <button data-filter="1-finger" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            1 Finger
+          </button>
+          <button data-filter="2-finger" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            2 Fingers
+          </button>
+          <button data-filter="3-finger" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            3 Fingers
+          </button>
+          <button data-filter="4-finger" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            4 Fingers
+          </button>
+          <button data-filter="swipe" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            Swipes
+          </button>
+          <button data-filter="pinch" class="matrix-filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium glass-pill text-white/70 hover:text-white">
+            Pinches
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full md:w-64">
+          <input
+            type="text"
+            id="gesture-search-input"
+            placeholder="Search gestures..."
+            class="w-full pl-9 pr-8 py-1.5 rounded-xl text-xs bg-black/40 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/70 transition-colors"
+          />
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-white/40">🔍</span>
+          <button id="clear-search-btn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-white/40 hover:text-white hidden">✕</button>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-[#86868b]">
+        <span id="gesture-count-badge">Showing 41 of 41 Gestures</span>
+        <div class="flex items-center space-x-3 text-[11px]">
+          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span><span>Mouse</span></span>
+          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-purple-400"></span><span>Hotkey</span></span>
+          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span><span>System</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic Gestures Grid -->
+    <div id="gesture-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto mb-16">
+      <!-- Injected dynamically by gestures.js -->
+    </div>
+
+    <!-- Action Targets Grid: What You Can Trigger -->
+    <div class="max-w-5xl mx-auto pt-8 border-t border-white/5">
+      <div class="text-center max-w-xl mx-auto mb-10">
+        <h3 class="text-2xl font-bold text-white mb-2">Assign Any Action Under the Sun</h3>
+        <p class="text-xs sm:text-sm text-[#86868b]">
+          Every gesture can trigger standard mouse buttons, complex recorded keyboard shortcuts, native macOS commands, or custom scripts.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Target 1: Mouse Actions -->
+        <div class="glass-panel rounded-xl p-5 hover:border-blue-500/40 transition-all">
+          <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xl mb-4">
+            🖱️
+          </div>
+          <h4 class="text-base font-bold text-white mb-1">Mouse Remapping</h4>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-3">
+            Middle click (Button 3), Back (Button 4), Forward (Button 5), Double/Triple Clicks, and custom drag locks.
+          </p>
+          <div class="text-[11px] font-mono text-blue-400">Middle Click • Back • Forward</div>
+        </div>
+
+        <!-- Target 2: Keyboard Hotkeys -->
+        <div class="glass-panel rounded-xl p-5 hover:border-purple-500/40 transition-all">
+          <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-xl mb-4">
+            ⌨️
+          </div>
+          <h4 class="text-base font-bold text-white mb-1">Hotkey Recorder</h4>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-3">
+            Capture and fire any combination of modifier keys (⌘, ⌥, ⌃, ⇧) plus alphanumeric keys with millisecond accuracy.
+          </p>
+          <div class="text-[11px] font-mono text-purple-400">⌘⇧[ • ⌃⌘Q • ⌘Space</div>
+        </div>
+
+        <!-- Target 3: macOS System Features -->
+        <div class="glass-panel rounded-xl p-5 hover:border-cyan-500/40 transition-all">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-xl mb-4">
+            🖥️
+          </div>
+          <h4 class="text-base font-bold text-white mb-1">macOS Navigation</h4>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-3">
+            Direct integration with Mission Control, App Exposé, Spaces Virtual Desktops, Launchpad, and Smart Zoom.
+          </p>
+          <div class="text-[11px] font-mono text-cyan-400">Mission Control • Spaces</div>
+        </div>
+
+        <!-- Target 4: Custom Shell & AppleScript -->
+        <div class="glass-panel rounded-xl p-5 hover:border-amber-500/40 transition-all">
+          <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl mb-4">
+            ⚡
+          </div>
+          <h4 class="text-base font-bold text-white mb-1">Scripts & Automations</h4>
+          <p class="text-xs text-[#86868b] leading-relaxed mb-3">
+            Trigger background Shell commands, Raycast/Alfred scripts, or AppleScript commands on gesture completion.
+          </p>
+          <div class="text-[11px] font-mono text-amber-400">AppleScript • bash • zsh</div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Installation Section -->
@@ -450,6 +576,8 @@
   <!-- Application Scripts -->
   <script src="js/audio.js" defer></script>
   <script src="js/simulator.js" defer></script>
+  <script src="js/gestures-data.js" defer></script>
+  <script src="js/gestures.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>
 </html>
