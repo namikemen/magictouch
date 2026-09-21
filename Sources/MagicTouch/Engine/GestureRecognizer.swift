@@ -49,12 +49,21 @@ public final class GestureRecognizer {
     private var minSpreadDelta: Float = 0
     private var maxSpreadDelta: Float = 0
     private var hasTriggeredPinch: Bool = false
-    private let pinchMinDelta: Float = 0.05
+    private let pinchMinDelta: Float = 0.08
 
     // Thresholds tuned for Magic Mouse surface dimensions
-    private let tapMaxDuration: Double = 0.50       // seconds
-    private let tapMaxMovement: Float = 0.14        // normalized distance (mouse surface is compact)
-    private let swipeMinDistance: Float = 0.10      // normalized distance
+    // 1-finger tap: tightened to prevent misclicks when resting finger or moving the mouse
+    private let oneFingerTapMinDuration: Double = 0.04   // seconds (filters micro-contact jitter)
+    private let oneFingerTapMaxDuration: Double = 0.28   // seconds (prevents misclick when resting finger)
+    private let oneFingerTapMaxMovement: Float = 0.065   // normalized distance (prevents misclick while moving mouse)
+
+    // Multi-finger tap thresholds
+    private let multiFingerTapMinDuration: Double = 0.035
+    private let multiFingerTapMaxDuration: Double = 0.35
+    private let multiFingerTapMaxMovement: Float = 0.10
+
+    // Swipe threshold
+    private let swipeMinDistance: Float = 0.09          // normalized distance
 
     // Multi-tap tracker
     private var lastTapTime: Double = 0
@@ -142,7 +151,52 @@ public final class GestureRecognizer {
                     if delta < minSpreadDelta { minSpreadDelta = delta }
                     if delta > maxSpreadDelta { maxSpreadDelta = delta }
 
-                    if !hasTriggeredPinch {
+                    // Check if fingers are translating together (swipe) rather than pinching in place
+                    var isCoherentSwipe = false
+                    var centroidMoved: Float = 0
+                    if touches.count >= 2 {
+                        var sumDx: Float = 0
+                        var sumDy: Float = 0
+                        var allSameSignX = true
+                        var allSameSignY = true
+                        var firstSignX: Float? = nil
+                        var firstSignY: Float? = nil
+
+                        for t in touches {
+                            if let initT = initialTouches[t.id] {
+                                let dx = t.x - initT.x
+                                let dy = t.y - initT.y
+                                sumDx += dx
+                                sumDy += dy
+
+                                if abs(dx) > 0.03 {
+                                    let sX: Float = dx > 0 ? 1.0 : -1.0
+                                    if let first = firstSignX {
+                                        if first != sX { allSameSignX = false }
+                                    } else {
+                                        firstSignX = sX
+                                    }
+                                }
+                                if abs(dy) > 0.03 {
+                                    let sY: Float = dy > 0 ? 1.0 : -1.0
+                                    if let first = firstSignY {
+                                        if first != sY { allSameSignY = false }
+                                    } else {
+                                        firstSignY = sY
+                                    }
+                                }
+                            }
+                        }
+                        let avgDx = sumDx / Float(touches.count)
+                        let avgDy = sumDy / Float(touches.count)
+                        centroidMoved = hypot(avgDx, avgDy)
+                        if centroidMoved >= 0.06 && (allSameSignX || allSameSignY) {
+                            isCoherentSwipe = true
+                        }
+                    }
+
+                    // Only trigger live pinch if fingers are not swiping together and centroid hasn't moved far
+                    if !hasTriggeredPinch && !isCoherentSwipe && centroidMoved < 0.07 {
                         if delta <= -pinchMinDelta {
                             hasTriggeredPinch = true
                             if activeFingers == 2 {
@@ -248,9 +302,72 @@ public final class GestureRecognizer {
     private func evaluateCompletedGesture(duration: Double, timestamp: Double) {
         let fingerCount = maxSimultaneousFingers
 
-        // Check for 2-finger or 3-finger pinch/spread (if not already triggered live)
+        // Calculate average displacement across fingers
+        var totalDx: Float = 0
+        var totalDy: Float = 0
+        var count: Float = 0
+
+        for (id, initial) in initialTouches {
+            if let final = currentTouches[id] ?? initialTouches[id] {
+                let dx = (final.x - initial.x)
+                let dy = (final.y - initial.y)
+                totalDx += dx
+                totalDy += dy
+                count += 1
+            }
+        }
+
+        let avgDx = count > 0 ? (totalDx / count) : 0
+        let avgDy = count > 0 ? (totalDy / count) : 0
+        let distance = sqrt(avgDx * avgDx + avgDy * avgDy)
+        let spreadChange = max(abs(minSpreadDelta), abs(maxSpreadDelta))
+
+        // 1. Check for Swipes FIRST (Prioritize over pinch when all fingers translate coherently in swipe direction)
+        if distance >= swipeMinDistance {
+            let dominantIsX = abs(avgDx) > abs(avgDy)
+            var allFingersTranslated = true
+
+            for (id, initial) in initialTouches {
+                if let final = currentTouches[id] ?? initialTouches[id] {
+                    let dx = final.x - initial.x
+                    let dy = final.y - initial.y
+                    if dominantIsX {
+                        if abs(dx) < 0.05 || (dx * avgDx <= 0) {
+                            allFingersTranslated = false
+                        }
+                    } else {
+                        if abs(dy) < 0.05 || (dy * avgDy <= 0) {
+                            allFingersTranslated = false
+                        }
+                    }
+                }
+            }
+
+            let isCoherentSwipe = allFingersTranslated && (distance >= spreadChange * 1.1)
+
+            if isCoherentSwipe {
+                if dominantIsX {
+                    // Horizontal Swipe
+                    if avgDx > 0 {
+                        dispatchSwipe(fingerCount: fingerCount, direction: .right)
+                    } else {
+                        dispatchSwipe(fingerCount: fingerCount, direction: .left)
+                    }
+                } else {
+                    // Vertical Swipe
+                    if avgDy > 0 {
+                        dispatchSwipe(fingerCount: fingerCount, direction: .up)
+                    } else {
+                        dispatchSwipe(fingerCount: fingerCount, direction: .down)
+                    }
+                }
+                return
+            }
+        }
+
+        // 2. Check for 2-finger or 3-finger pinch/spread (if not already triggered live and not a swipe)
         if !hasTriggeredPinch && fingerCount >= 2 {
-            if minSpreadDelta <= -pinchMinDelta {
+            if minSpreadDelta <= -pinchMinDelta && (spreadChange >= distance * 0.8 || distance < swipeMinDistance) {
                 hasTriggeredPinch = true
                 if fingerCount == 2 {
                     delegate?.gestureRecognizerDidDetect(gesture: .twoFingerPinchIn)
@@ -271,46 +388,23 @@ public final class GestureRecognizer {
             }
         }
 
-        // Calculate average displacement across fingers
-        var totalDx: Float = 0
-        var totalDy: Float = 0
-        var count: Float = 0
-
-        for (id, initial) in initialTouches {
-            if let final = currentTouches[id] ?? initialTouches[id] {
-                totalDx += (final.x - initial.x)
-                totalDy += (final.y - initial.y)
-                count += 1
-            }
+        // 3. Check for Taps (Tuned to prevent 1-finger tap misclicks)
+        let isTap: Bool
+        if fingerCount == 1 {
+            // 1-finger tap: stricter time window (40ms - 280ms) and tight movement (< 0.065)
+            // This prevents misclicks when finger is resting on mouse or when hand moves the mouse
+            isTap = duration >= oneFingerTapMinDuration &&
+                    duration <= oneFingerTapMaxDuration &&
+                    distance < oneFingerTapMaxMovement
+        } else {
+            // Multi-finger tap: 35ms - 350ms and movement < 0.10
+            isTap = duration >= multiFingerTapMinDuration &&
+                    duration <= multiFingerTapMaxDuration &&
+                    distance < multiFingerTapMaxMovement
         }
 
-        let avgDx = count > 0 ? (totalDx / count) : 0
-        let avgDy = count > 0 ? (totalDy / count) : 0
-        let distance = sqrt(avgDx * avgDx + avgDy * avgDy)
-
-        // Check for Swipes
-        if distance >= swipeMinDistance {
-            if abs(avgDx) > abs(avgDy) {
-                // Horizontal Swipe
-                if avgDx > 0 {
-                    dispatchSwipe(fingerCount: fingerCount, direction: .right)
-                } else {
-                    dispatchSwipe(fingerCount: fingerCount, direction: .left)
-                }
-            } else {
-                // Vertical Swipe
-                if avgDy > 0 {
-                    dispatchSwipe(fingerCount: fingerCount, direction: .up)
-                } else {
-                    dispatchSwipe(fingerCount: fingerCount, direction: .down)
-                }
-            }
-            return
-        }
-
-        // Check for Taps
-        if duration <= tapMaxDuration && distance < tapMaxMovement {
-            if (timestamp - lastTapTime) < 0.38 && lastTapFingerCount == fingerCount {
+        if isTap {
+            if (timestamp - lastTapTime) < 0.35 && lastTapFingerCount == fingerCount {
                 consecutiveTapCount += 1
             } else {
                 consecutiveTapCount = 1

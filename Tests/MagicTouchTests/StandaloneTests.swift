@@ -65,6 +65,58 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .twoFingerSwipeRight, "Detected 2-finger swipe right")
     }
 
+    func testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn() {
+        print("Running: Two Finger Swipe Left with Natural Finger Compression (not Pinch In)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+
+        // User places 2 fingers on right side: spread = 0.20
+        let startTouches = [
+            TouchPoint(id: 1, x: 0.70, y: 0.50),
+            TouchPoint(id: 2, x: 0.50, y: 0.50)
+        ]
+        recognizer.processFrame(touches: startTouches, timestamp: 2.5)
+
+        // Hand swipes left across curved surface, fingers naturally compress to spread = 0.13 (delta = -0.07)
+        let moveTouches = [
+            TouchPoint(id: 1, x: 0.45, y: 0.51),
+            TouchPoint(id: 2, x: 0.32, y: 0.51)
+        ]
+        recognizer.processFrame(touches: moveTouches, timestamp: 2.65)
+        recognizer.processFrame(touches: [], timestamp: 2.70)
+
+        assertEqual(lastDetectedGesture, .twoFingerSwipeLeft, "Detected 2-finger swipe left rather than false pinch in")
+    }
+
+    func testOneFingerLongRestNotTap() {
+        print("Running: 1-Finger Long Resting Finger Lift (must NOT trigger tap)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+
+        // User rests index finger on mouse for 450ms while moving/reading
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.50)], timestamp: 10.0)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.50)], timestamp: 10.45)
+        recognizer.processFrame(touches: [], timestamp: 10.46)
+
+        assertEqual(lastDetectedGesture, nil, "Resting finger for 450ms does NOT trigger accidental tap")
+    }
+
+    func testOneFingerDriftNotTap() {
+        print("Running: 1-Finger Hand Movement / Drift (must NOT trigger tap)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+
+        // User's finger drifts across 8.5% of surface while moving mouse
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.50)], timestamp: 11.0)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.385, y: 0.50)], timestamp: 11.15)
+        recognizer.processFrame(touches: [], timestamp: 11.16)
+
+        assertEqual(lastDetectedGesture, nil, "Finger drifting by 8.5% does NOT trigger accidental tap")
+    }
+
     func testTwoFingerPinchInDetection() {
         print("Running: Two Finger Pinch In Detection...")
         let recognizer = GestureRecognizer()
@@ -522,6 +574,9 @@ struct RunnerApp {
         runner.testGestureTypeLegacyDecoding()
         runner.testThreeFingerTapDetection()
         runner.testTwoFingerSwipeRightDetection()
+        runner.testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn()
+        runner.testOneFingerLongRestNotTap()
+        runner.testOneFingerDriftNotTap()
         runner.testTwoFingerPinchInDetection()
         runner.testTwoFingerPinchOutDetection()
         runner.testThreeFingerPinchInDetection()
@@ -534,6 +589,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 22 MagicTouch test suites passed successfully!")
+        print("🎉 All 25 MagicTouch test suites passed successfully!")
     }
 }
