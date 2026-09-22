@@ -83,6 +83,13 @@ public final class GestureRecognizer {
     private var consecutiveTapCount: Int = 0
     private var hasPhysicalClickedInCurrentSession = false
 
+    // Movement & scroll tracking to protect against false taps during scrolling
+    private var maxExcursionFromStart: [Int: Float] = [:]
+    private var totalPathDistance: [Int: Float] = [:]
+    private var previousPositions: [Int: TouchPoint] = [:]
+    private var hasScrolledInCurrentSession = false
+    private var lastScrollTime: Double = 0
+
     public init() {}
 
     private func calculateSpread(touches: [TouchPoint]) -> Float {
@@ -239,6 +246,17 @@ public final class GestureRecognizer {
             currentTouches.removeAll()
             for t in touches {
                 currentTouches[t.id] = t
+                if let initial = initialTouches[t.id] {
+                    let exc = hypot(t.x - initial.x, t.y - initial.y)
+                    if exc > (maxExcursionFromStart[t.id] ?? 0) {
+                        maxExcursionFromStart[t.id] = exc
+                    }
+                }
+                if let prev = previousPositions[t.id] {
+                    let step = hypot(t.x - prev.x, t.y - prev.y)
+                    totalPathDistance[t.id] = (totalPathDistance[t.id] ?? 0) + step
+                }
+                previousPositions[t.id] = t
             }
         } else {
             // All fingers lifted: evaluate gesture session
@@ -260,6 +278,10 @@ public final class GestureRecognizer {
                 maxSpreadDelta = 0
                 hasTriggeredPinch = false
                 maxSimultaneousFingers = 0
+                maxExcursionFromStart.removeAll()
+                totalPathDistance.removeAll()
+                previousPositions.removeAll()
+                hasScrolledInCurrentSession = false
                 return
             }
             isPotentialDragHold = false
@@ -292,6 +314,10 @@ public final class GestureRecognizer {
                 hasTriggeredPinch = false
                 maxSimultaneousFingers = 0
                 hasPhysicalClickedInCurrentSession = false
+                maxExcursionFromStart.removeAll()
+                totalPathDistance.removeAll()
+                previousPositions.removeAll()
+                hasScrolledInCurrentSession = false
             }
         }
     }
@@ -441,9 +467,16 @@ public final class GestureRecognizer {
         // 2. Check for Taps
         let isTap: Bool
         if fingerCount == 1 {
-            isTap = duration >= oneFingerTapMinDuration &&
+            let maxExcursion = initialTouches.keys.compactMap { maxExcursionFromStart[$0] }.max() ?? distance
+            let totalPath = initialTouches.keys.compactMap { totalPathDistance[$0] }.max() ?? distance
+            let wasScrolling = hasScrolledInCurrentSession || (timestamp - lastScrollTime) < 0.25
+
+            isTap = !wasScrolling &&
+                    duration >= oneFingerTapMinDuration &&
                     duration <= oneFingerTapMaxDuration &&
-                    distance < oneFingerTapMaxMovement
+                    distance < oneFingerTapMaxMovement &&
+                    maxExcursion < 0.045 &&
+                    totalPath < 0.050
         } else {
             // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&
@@ -569,5 +602,11 @@ public final class GestureRecognizer {
         default:
             break
         }
+    }
+
+    /// Notify that native mouse scrolling occurred
+    public func notifyScrollActivity(timestamp: Double = 0) {
+        lastScrollTime = (timestamp > 0) ? timestamp : ProcessInfo.processInfo.systemUptime
+        hasScrolledInCurrentSession = true
     }
 }

@@ -127,9 +127,9 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         recognizer.processFrame(touches: touches, timestamp: timestamp)
     }
 
-    // MARK: - Click Event Tap
+    // MARK: - Click & Scroll Event Tap
     private func startClickInterceptor() {
-        let mask = (1 << CGEventType.leftMouseDown.rawValue)
+        let mask = (1 << CGEventType.leftMouseDown.rawValue) | (1 << CGEventType.scrollWheel.rawValue)
         guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
@@ -138,7 +138,11 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
                 if let refcon = refcon {
                     let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
-                    mgr.recognizer.processPhysicalClick()
+                    if type == .scrollWheel {
+                        mgr.recognizer.notifyScrollActivity()
+                    } else if type == .leftMouseDown {
+                        mgr.recognizer.processPhysicalClick()
+                    }
                 }
                 return Unmanaged.passRetained(event)
             },

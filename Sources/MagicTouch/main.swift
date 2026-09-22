@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
     let appState = AppState.shared
     private var lastDispatchedGesture: GestureType?
     private var lastDispatchedTime: Double = 0
+    private var lastSingleTapGesture: GestureType = .oneFingerTapLeft
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // Menu bar only app (no dock icon)
@@ -74,11 +75,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
     // MARK: - MultitouchManagerDelegate
     func multitouchManagerDidDetect(gesture: GestureType) {
         let now = ProcessInfo.processInfo.systemUptime
-        if gesture == lastDispatchedGesture && (now - lastDispatchedTime) < 0.15 {
+        // Debounce only micro-bounces (< 50ms) so rapid deliberate taps are never dropped
+        if gesture == lastDispatchedGesture && (now - lastDispatchedTime) < 0.05 {
             return
         }
         lastDispatchedGesture = gesture
         lastDispatchedTime = now
+
+        if gesture == .oneFingerTapLeft || gesture == .oneFingerTapRight {
+            lastSingleTapGesture = gesture
+        }
 
         DispatchQueue.main.async {
             self.appState.lastGesture = gesture.rawValue
@@ -87,6 +93,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
         // Check if user has an assigned action for this gesture
         if let action = configStore.actionForGesture(gesture) {
             actionDispatcher.execute(action: action)
+        } else if gesture == .oneFingerDoubleTap {
+            // User did not map 1-Finger Double Tap: fall back to single tap action
+            // so standard double-clicking/tapping functions naturally without eating taps!
+            if let fallbackAction = configStore.actionForGesture(lastSingleTapGesture) {
+                actionDispatcher.execute(action: fallbackAction)
+            }
         }
     }
 

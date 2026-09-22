@@ -638,6 +638,46 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
 
         assertEqual(detectedGestures.count, 1, "Contact bounce within 120ms does NOT trigger second tap")
     }
+
+    func testScrollDoesNotTriggerTap() {
+        print("Running: 1-Finger Scroll does NOT trigger tap...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // User starts scroll at y = 0.50
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.50)], timestamp: 70.0)
+        // User moves finger down: y = 0.44 (excursion 0.06)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.44)], timestamp: 70.05)
+        // User moves finger down further: y = 0.38 (excursion 0.12)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.38)], timestamp: 70.10)
+        // User recoils slightly to y = 0.46 (net displacement 0.04 < 0.065)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.46)], timestamp: 70.15)
+        // User lifts finger: total duration 0.18s
+        recognizer.processFrame(touches: [], timestamp: 70.18)
+
+        assertEqual(lastDetectedGesture, nil, "1-finger scrolling movement with excursion does NOT trigger tap")
+        assertEqual(detectedGestures.count, 0, "No false tap detected from scroll")
+    }
+
+    func testScrollNotificationSuppressesTap() {
+        print("Running: Scroll Activity Notification Suppresses Tap...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // Native scroll event intercepted right before or during touch
+        recognizer.notifyScrollActivity(timestamp: 80.05)
+
+        // Very small contact at 80.10, lifted at 80.18
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.50)], timestamp: 80.10)
+        recognizer.processFrame(touches: [], timestamp: 80.18)
+
+        assertEqual(lastDetectedGesture, nil, "Scroll activity suppresses subsequent tap within cooldown")
+        assertEqual(detectedGestures.count, 0, "No tap dispatched while scroll was active")
+    }
 }
 
 @main
@@ -655,6 +695,8 @@ struct RunnerApp {
         runner.testThreeFingerTapDetection()
         runner.testPhysicalClickSuppressesTapOnRelease()
         runner.testThreeFingerTapBounceDebounce()
+        runner.testScrollDoesNotTriggerTap()
+        runner.testScrollNotificationSuppressesTap()
         runner.testTwoFingerSwipeRightDetection()
         runner.testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn()
         runner.testTwoFingerSwipeLeftWithAsynchronousFingerLiftNotPinchIn()
@@ -672,6 +714,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 28 MagicTouch test suites passed successfully!")
+        print("🎉 All 30 MagicTouch test suites passed successfully!")
     }
 }
