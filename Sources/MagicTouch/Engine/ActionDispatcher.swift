@@ -138,11 +138,9 @@ public final class ActionDispatcher {
            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) {
             keyDown.flags = flags
             keyUp.flags = flags
-            // Post to both Session event tap (active app focus) and HID event tap (system-level)
-            keyDown.post(tap: .cgSessionEventTap)
+            // Post to HID event tap (system-level routing to active application)
             keyDown.post(tap: .cghidEventTap)
             usleep(25000) // 25ms hold for app event loop capture
-            keyUp.post(tap: .cgSessionEventTap)
             keyUp.post(tap: .cghidEventTap)
         }
     }

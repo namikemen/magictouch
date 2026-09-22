@@ -2,10 +2,12 @@ import Foundation
 
 final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
     private var lastDetectedGesture: GestureType?
+    private var detectedGestures: [GestureType] = []
     private var updatedTouches: [TouchPoint] = []
 
     func gestureRecognizerDidDetect(gesture: GestureType) {
         self.lastDetectedGesture = gesture
+        self.detectedGestures.append(gesture)
     }
 
     func gestureRecognizerDidUpdateTouches(touches: [TouchPoint]) {
@@ -586,6 +588,56 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
             exit(1)
         }
     }
+
+    func testPhysicalClickSuppressesTapOnRelease() {
+        print("Running: Physical Click Suppresses Tap on Release...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        let touches = [
+            TouchPoint(id: 1, x: 0.3, y: 0.7),
+            TouchPoint(id: 2, x: 0.5, y: 0.7),
+            TouchPoint(id: 3, x: 0.7, y: 0.7)
+        ]
+        recognizer.processFrame(touches: touches, timestamp: 50.0)
+        // User physically depresses the mouse button
+        recognizer.processPhysicalClick()
+        assertEqual(lastDetectedGesture, .threeFingerClick, "Physical 3-finger click detected")
+
+        // User releases physical click and lifts fingers
+        recognizer.processFrame(touches: [], timestamp: 50.15)
+
+        // Must still be .threeFingerClick and NOT have triggered .threeFingerTap!
+        assertEqual(lastDetectedGesture, .threeFingerClick, "Finger release does NOT trigger false tap after click")
+        assertEqual(detectedGestures.count, 1, "Only 1 gesture dispatched during click session")
+    }
+
+    func testThreeFingerTapBounceDebounce() {
+        print("Running: Three Finger Tap Bounce Debounce...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        let touches = [
+            TouchPoint(id: 1, x: 0.3, y: 0.7),
+            TouchPoint(id: 2, x: 0.5, y: 0.7),
+            TouchPoint(id: 3, x: 0.7, y: 0.7)
+        ]
+        // Clean 3-finger tap
+        recognizer.processFrame(touches: touches, timestamp: 60.0)
+        recognizer.processFrame(touches: [], timestamp: 60.08)
+        assertEqual(detectedGestures.count, 1, "First 3-finger tap detected")
+        assertEqual(detectedGestures.first, .threeFingerTap, "Gesture is threeFingerTap")
+
+        // Hardware contact bounce: fingers graze glass 40ms later for 20ms
+        recognizer.processFrame(touches: touches, timestamp: 60.12)
+        recognizer.processFrame(touches: [], timestamp: 60.14)
+
+        assertEqual(detectedGestures.count, 1, "Contact bounce within 120ms does NOT trigger second tap")
+    }
 }
 
 @main
@@ -601,6 +653,8 @@ struct RunnerApp {
         runner.testConfigurationStoreEnableToggle()
         runner.testGestureTypeLegacyDecoding()
         runner.testThreeFingerTapDetection()
+        runner.testPhysicalClickSuppressesTapOnRelease()
+        runner.testThreeFingerTapBounceDebounce()
         runner.testTwoFingerSwipeRightDetection()
         runner.testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn()
         runner.testTwoFingerSwipeLeftWithAsynchronousFingerLiftNotPinchIn()
@@ -618,6 +672,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 26 MagicTouch test suites passed successfully!")
+        print("🎉 All 28 MagicTouch test suites passed successfully!")
     }
 }

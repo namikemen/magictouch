@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
     let configStore = ConfigurationStore.shared
     let actionDispatcher = ActionDispatcher.shared
     let appState = AppState.shared
+    private var lastDispatchedGesture: GestureType?
+    private var lastDispatchedTime: Double = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // Menu bar only app (no dock icon)
@@ -71,6 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
 
     // MARK: - MultitouchManagerDelegate
     func multitouchManagerDidDetect(gesture: GestureType) {
+        let now = ProcessInfo.processInfo.systemUptime
+        if gesture == lastDispatchedGesture && (now - lastDispatchedTime) < 0.15 {
+            return
+        }
+        lastDispatchedGesture = gesture
+        lastDispatchedTime = now
+
         DispatchQueue.main.async {
             self.appState.lastGesture = gesture.rawValue
         }

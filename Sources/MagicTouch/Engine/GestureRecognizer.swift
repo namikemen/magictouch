@@ -81,6 +81,7 @@ public final class GestureRecognizer {
     private var lastTapTime: Double = 0
     private var lastTapFingerCount: Int = 0
     private var consecutiveTapCount: Int = 0
+    private var hasPhysicalClickedInCurrentSession = false
 
     public init() {}
 
@@ -290,12 +291,16 @@ public final class GestureRecognizer {
                 maxSpreadDelta = 0
                 hasTriggeredPinch = false
                 maxSimultaneousFingers = 0
+                hasPhysicalClickedInCurrentSession = false
             }
         }
     }
 
     /// Evaluate what gesture was made when fingers lift
     private func evaluateCompletedGesture(duration: Double, timestamp: Double) {
+        if hasPhysicalClickedInCurrentSession {
+            return
+        }
         let fingerCount = maxSimultaneousFingers
 
         // Calculate average displacement across fingers, using lastKnownTouches for lifted fingers
@@ -448,6 +453,10 @@ public final class GestureRecognizer {
 
         if isTap {
             if (timestamp - lastTapTime) < 0.35 && lastTapFingerCount == fingerCount {
+                // Reject rapid capacitive contact bounce (< 120ms) for multi-finger taps
+                if (timestamp - lastTapTime) < 0.12 && fingerCount >= 2 {
+                    return
+                }
                 consecutiveTapCount += 1
             } else {
                 consecutiveTapCount = 1
@@ -546,6 +555,7 @@ public final class GestureRecognizer {
 
     /// Process a physical mouse click intercepted via CGEventTap or mouse hook
     public func processPhysicalClick() {
+        hasPhysicalClickedInCurrentSession = true
         let fingers = currentTouches.count > 0 ? currentTouches.count : maxSimultaneousFingers
         switch fingers {
         case 1:
