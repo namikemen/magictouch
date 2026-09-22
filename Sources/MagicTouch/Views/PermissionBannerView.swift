@@ -16,7 +16,7 @@ public struct PermissionBannerView: View {
             }
 
             if !permissionManager.allGranted {
-                Text("Enable Accessibility & Input Monitoring so gestures can read mouse touches and dispatch actions.")
+                Text("Enable Accessibility & Input Monitoring. Note: macOS requires restarting MagicTouch after granting Input Monitoring.")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
@@ -28,7 +28,7 @@ public struct PermissionBannerView: View {
                     HStack(spacing: 4) {
                         Image(systemName: permissionManager.hasAccessibility ? "checkmark.circle.fill" : "hand.raised.fill")
                             .foregroundColor(permissionManager.hasAccessibility ? .green : .yellow)
-                        Text(permissionManager.hasAccessibility ? "Accessibility: Granted" : "Grant Accessibility")
+                        Text(permissionManager.hasAccessibility ? "Accessibility: OK" : "Grant Accessibility")
                     }
                 }
                 .buttonStyle(.bordered)
@@ -40,11 +40,24 @@ public struct PermissionBannerView: View {
                     HStack(spacing: 4) {
                         Image(systemName: permissionManager.hasInputMonitoring ? "checkmark.circle.fill" : "keyboard.fill")
                             .foregroundColor(permissionManager.hasInputMonitoring ? .green : .yellow)
-                        Text(permissionManager.hasInputMonitoring ? "Input: Granted" : "Grant Input Monitoring")
+                        Text(permissionManager.hasInputMonitoring ? "Input: OK" : "Grant Input Monitoring")
                     }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.mini)
+
+                if !permissionManager.allGranted {
+                    Button(action: {
+                        permissionManager.restartApp()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                            Text("Relaunch App")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.mini)
+                }
             }
             .padding(.top, 2)
         }

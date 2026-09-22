@@ -6,6 +6,8 @@ import AppKit
 public final class ActionDispatcher {
     public static let shared = ActionDispatcher()
 
+    private var isDragging = false
+
     private init() {}
 
     public func execute(action: ActionTarget) {
@@ -25,6 +27,25 @@ public final class ActionDispatcher {
         }
     }
 
+    // MARK: - Drag Simulation
+    public func startLeftDrag() {
+        guard !isDragging else { return }
+        guard let location = CGEvent(source: nil)?.location else { return }
+        if let downEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: location, mouseButton: .left) {
+            downEvent.post(tap: .cghidEventTap)
+            isDragging = true
+        }
+    }
+
+    public func endLeftDrag() {
+        guard isDragging else { return }
+        guard let location = CGEvent(source: nil)?.location else { return }
+        if let upEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: location, mouseButton: .left) {
+            upEvent.post(tap: .cghidEventTap)
+            isDragging = false
+        }
+    }
+
     // MARK: - Mouse Simulation
     private func triggerMouseButton(_ button: MouseButtonType) {
         guard let location = CGEvent(source: nil)?.location else { return }
@@ -35,6 +56,13 @@ public final class ActionDispatcher {
             return
         case .tripleClick:
             triggerMultiClick(count: 3, location: location)
+            return
+        case .leftDrag:
+            if isDragging {
+                endLeftDrag()
+            } else {
+                startLeftDrag()
+            }
             return
         default:
             break
@@ -65,7 +93,7 @@ public final class ActionDispatcher {
             mouseTypeDown = .otherMouseDown
             mouseTypeUp = .otherMouseUp
             mouseButton = CGMouseButton(rawValue: 4)!
-        case .doubleClick, .tripleClick:
+        case .doubleClick, .tripleClick, .leftDrag:
             return
         }
 
@@ -110,8 +138,11 @@ public final class ActionDispatcher {
            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) {
             keyDown.flags = flags
             keyUp.flags = flags
+            // Post to both Session event tap (active app focus) and HID event tap (system-level)
+            keyDown.post(tap: .cgSessionEventTap)
             keyDown.post(tap: .cghidEventTap)
-            usleep(15000)
+            usleep(25000) // 25ms hold for app event loop capture
+            keyUp.post(tap: .cgSessionEventTap)
             keyUp.post(tap: .cghidEventTap)
         }
     }
@@ -148,8 +179,7 @@ public final class ActionDispatcher {
     private func triggerSystemAction(_ action: SystemActionType) {
         switch action {
         case .missionControl:
-            // Open Mission Control via open command
-            runShellCommand("open -b com.apple.exposelauncher")
+            runShellCommand("open -b com.apple.exposelauncher 2>/dev/null || open -a 'Mission Control' 2>/dev/null")
         case .appExpose:
             // Simulate Ctrl + Down
             triggerKeystroke(modifiers: [.control], keyCode: 125)
@@ -157,7 +187,8 @@ public final class ActionDispatcher {
             // Simulate F11
             triggerKeystroke(modifiers: [], keyCode: 103)
         case .launchpad:
-            runShellCommand("open -b com.apple.launchpad.launcher")
+            // Supports modern macOS Sequoia/Tahoe (com.apple.apps.launcher) and legacy (com.apple.launchpad.launcher)
+            runShellCommand("open -b com.apple.apps.launcher 2>/dev/null || open -b com.apple.launchpad.launcher 2>/dev/null || open -a Apps 2>/dev/null || open -a Launchpad 2>/dev/null")
         case .volumeUp:
             runAppleScript("set volume output volume ((output volume of (get volume settings)) + 6)")
         case .volumeDown:

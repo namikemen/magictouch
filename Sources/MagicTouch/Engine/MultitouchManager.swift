@@ -34,6 +34,13 @@ public protocol MultitouchManagerDelegate: AnyObject {
     func multitouchManagerDidDetect(gesture: GestureType)
     func multitouchManagerDidUpdateTouches(touches: [TouchPoint])
     func multitouchManagerDeviceStatusChanged(connected: Bool, deviceName: String)
+    func multitouchManagerDidStartDrag()
+    func multitouchManagerDidEndDrag()
+}
+
+public extension MultitouchManagerDelegate {
+    func multitouchManagerDidStartDrag() {}
+    func multitouchManagerDidEndDrag() {}
 }
 
 public final class MultitouchManager: GestureRecognizerDelegate {
@@ -147,6 +154,12 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         CGEvent.tapEnable(tap: tap, enable: true)
     }
 
+    public func restartClickInterceptorIfNeeded() {
+        if clickEventTap == nil && isRunning {
+            startClickInterceptor()
+        }
+    }
+
     private func stopClickInterceptor() {
         if let tap = clickEventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
@@ -161,5 +174,13 @@ public final class MultitouchManager: GestureRecognizerDelegate {
 
     public func gestureRecognizerDidUpdateTouches(touches: [TouchPoint]) {
         delegate?.multitouchManagerDidUpdateTouches(touches: touches)
+    }
+
+    public func gestureRecognizerDidStartDrag() {
+        delegate?.multitouchManagerDidStartDrag()
+    }
+
+    public func gestureRecognizerDidEndDrag() {
+        delegate?.multitouchManagerDidEndDrag()
     }
 }

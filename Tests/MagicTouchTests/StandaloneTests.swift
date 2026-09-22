@@ -216,52 +216,24 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .twoFingerPinchOut, "Detected 2-finger pinch out")
     }
 
-    func testThreeFingerPinchInDetection() {
-        print("Running: Three Finger Pinch In Detection...")
+    func testHoldToDragDetection() {
+        print("Running: Hold to Drag (Tap & Hold) Detection...")
         let recognizer = GestureRecognizer()
         recognizer.delegate = self
         lastDetectedGesture = nil
 
-        let startTouches = [
-            TouchPoint(id: 1, x: 0.2, y: 0.5),
-            TouchPoint(id: 2, x: 0.5, y: 0.5),
-            TouchPoint(id: 3, x: 0.8, y: 0.5)
-        ]
-        recognizer.processFrame(touches: startTouches, timestamp: 5.0)
+        // Step 1: Initial quick tap
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.5, y: 0.5, totalSize: 0.2)], timestamp: 10.0)
+        recognizer.processFrame(touches: [], timestamp: 10.08)
 
-        let pinchedTouches = [
-            TouchPoint(id: 1, x: 0.4, y: 0.5),
-            TouchPoint(id: 2, x: 0.5, y: 0.5),
-            TouchPoint(id: 3, x: 0.6, y: 0.5)
-        ]
-        recognizer.processFrame(touches: pinchedTouches, timestamp: 5.2)
-        recognizer.processFrame(touches: [], timestamp: 5.3)
+        // Step 2: Touch down again within 200ms and hold for 140ms
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.5, y: 0.5, totalSize: 0.25)], timestamp: 10.20)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.52, y: 0.51, totalSize: 0.25)], timestamp: 10.35)
 
-        assertEqual(lastDetectedGesture, .threeFingerPinchIn, "Detected 3-finger pinch in")
-    }
+        assertEqual(lastDetectedGesture, .holdToDrag, "Detected Hold to Drag on tap-and-hold")
 
-    func testThreeFingerPinchOutDetection() {
-        print("Running: Three Finger Pinch Out Detection...")
-        let recognizer = GestureRecognizer()
-        recognizer.delegate = self
-        lastDetectedGesture = nil
-
-        let startTouches = [
-            TouchPoint(id: 1, x: 0.4, y: 0.5),
-            TouchPoint(id: 2, x: 0.5, y: 0.5),
-            TouchPoint(id: 3, x: 0.6, y: 0.5)
-        ]
-        recognizer.processFrame(touches: startTouches, timestamp: 6.0)
-
-        let spreadTouches = [
-            TouchPoint(id: 1, x: 0.2, y: 0.5),
-            TouchPoint(id: 2, x: 0.5, y: 0.5),
-            TouchPoint(id: 3, x: 0.8, y: 0.5)
-        ]
-        recognizer.processFrame(touches: spreadTouches, timestamp: 6.2)
-        recognizer.processFrame(touches: [], timestamp: 6.3)
-
-        assertEqual(lastDetectedGesture, .threeFingerPinchOut, "Detected 3-finger pinch out")
+        // Step 3: Release finger ends drag
+        recognizer.processFrame(touches: [], timestamp: 10.50)
     }
 
     func testAsymmetricalPinchInNotSwipe() {
@@ -474,9 +446,11 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
 
     func testGestureTypeLegacyDecoding() {
         print("Running: Legacy GestureType JSON Decoding...")
-        let legacyJSON = "\"1-Finger Tap\"".data(using: .utf8)!
-        let decoded = try? JSONDecoder().decode(GestureType.self, from: legacyJSON)
-        assertEqual(decoded, .oneFingerTapLeft, "Decoded legacy '1-Finger Tap' to .oneFingerTapLeft")
+        let legacyJSON = "[\"1-Finger Tap\", \"1-Finger Double Tap Left\", \"3-Finger Pinch In\"]".data(using: .utf8)!
+        let decoded = try? JSONDecoder().decode([GestureType].self, from: legacyJSON)
+        assertEqual(decoded?[0], .oneFingerTapLeft, "Decoded legacy '1-Finger Tap' to .oneFingerTapLeft")
+        assertEqual(decoded?[1], .oneFingerDoubleTap, "Decoded legacy '1-Finger Double Tap Left' to .oneFingerDoubleTap")
+        assertEqual(decoded?[2], .twoFingerPinchIn, "Decoded legacy '3-Finger Pinch In' to .twoFingerPinchIn")
     }
 
     func testOneFingerTripleTapDetection() {
@@ -486,15 +460,15 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         lastDetectedGesture = nil
 
         // Tap 1
-        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50)], timestamp: 30.0)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50, totalSize: 0.2)], timestamp: 30.0)
         recognizer.processFrame(touches: [], timestamp: 30.1)
 
         // Tap 2
-        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50)], timestamp: 30.2)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50, totalSize: 0.2)], timestamp: 30.2)
         recognizer.processFrame(touches: [], timestamp: 30.3)
 
         // Tap 3
-        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50)], timestamp: 30.4)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50, totalSize: 0.2)], timestamp: 30.4)
         recognizer.processFrame(touches: [], timestamp: 30.5)
 
         assertEqual(lastDetectedGesture, .oneFingerTripleTap, "Detected 1-Finger Triple Tap")
@@ -521,25 +495,27 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .twoFingerTripleTap, "Detected 2-Finger Triple Tap")
     }
 
-    func testConfigurationStoreTripleTapFallback() {
-        print("Running: Configuration Store Triple Tap Fallback...")
-        let store = ConfigurationStore.shared
-        let mapping = GestureMapping(gesture: .oneFingerTripleTap, action: .mouseButton(button: .tripleClick))
-        store.mappings.removeAll(where: { $0.gesture == .oneFingerTripleTap || $0.gesture == .oneFingerTripleTapLeft })
-        store.addMapping(mapping)
-
-        // Querying for oneFingerTripleTapLeft should fall back to general oneFingerTripleTap mapping
-        assertEqual(store.actionForGesture(.oneFingerTripleTapLeft), .mouseButton(button: .tripleClick), "Resolves sub-zone triple tap to general mapping")
-
-        store.deleteMapping(id: mapping.id)
+    func testConfigurationStoreEnableToggle() {
+        print("Running: Configuration Store Enable/Disable Toggle...")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        let store = ConfigurationStore(saveURL: tempURL)
+        XCTAssertDefault(store.isEnabled, "Store is enabled by default")
+        store.isEnabled = false
+        XCTAssertDefault(!store.isEnabled, "Store can be disabled")
+        assertEqual(store.actionForGesture(.threeFingerClick), nil, "No action returned when store is disabled")
+        store.isEnabled = true
+        assertEqual(store.actionForGesture(.threeFingerClick), .mouseButton(button: .middleClick), "Action returned when store is enabled")
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     func testConfigurationStorePersistence() {
         print("Running: Configuration Store Mapping & Query...")
-        let store = ConfigurationStore.shared
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        let store = ConfigurationStore(saveURL: tempURL)
         XCTAssertDefault(store.isEnabled, "Store is enabled by default")
         let action = store.actionForGesture(.threeFingerClick)
         assertEqual(action, .mouseButton(button: .middleClick), "Default 3-finger click resolves to Middle Click")
+        try? FileManager.default.removeItem(at: tempURL)
     }
 
     func testSemVerComparison() {
@@ -622,7 +598,7 @@ struct RunnerApp {
         runner.testOneFingerTapRightDetection()
         runner.testOneFingerTripleTapDetection()
         runner.testTwoFingerTripleTapDetection()
-        runner.testConfigurationStoreTripleTapFallback()
+        runner.testConfigurationStoreEnableToggle()
         runner.testGestureTypeLegacyDecoding()
         runner.testThreeFingerTapDetection()
         runner.testTwoFingerSwipeRightDetection()
@@ -633,8 +609,7 @@ struct RunnerApp {
         runner.testOneFingerDriftNotTap()
         runner.testTwoFingerPinchInDetection()
         runner.testTwoFingerPinchOutDetection()
-        runner.testThreeFingerPinchInDetection()
-        runner.testThreeFingerPinchOutDetection()
+        runner.testHoldToDragDetection()
         runner.testAsymmetricalPinchInNotSwipe()
         runner.testPhysicalClickSimulation()
         runner.testTipTapRightDetection()
@@ -643,6 +618,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 27 MagicTouch test suites passed successfully!")
+        print("🎉 All 26 MagicTouch test suites passed successfully!")
     }
 }

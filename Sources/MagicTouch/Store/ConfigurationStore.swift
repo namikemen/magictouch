@@ -7,16 +7,26 @@ public final class ConfigurationStore: ObservableObject {
     public static let shared = ConfigurationStore()
 
     @Published public var mappings: [GestureMapping] = []
-    @Published public var isEnabled: Bool = true
+    @Published public var isEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isEnabled, forKey: "MagicTouch_IsEnabled")
+        }
+    }
 
     private let saveURL: URL
 
-    public init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appDir = appSupport.appendingPathComponent("MagicTouch", isDirectory: true)
+    public init(saveURL: URL? = nil) {
+        if let customURL = saveURL {
+            self.saveURL = customURL
+            self.isEnabled = true
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let appDir = appSupport.appendingPathComponent("MagicTouch", isDirectory: true)
 
-        try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
-        self.saveURL = appDir.appendingPathComponent("gestures.json")
+            try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
+            self.saveURL = appDir.appendingPathComponent("gestures.json")
+            self.isEnabled = UserDefaults.standard.object(forKey: "MagicTouch_IsEnabled") as? Bool ?? true
+        }
 
         load()
     }
@@ -80,20 +90,6 @@ public final class ConfigurationStore: ObservableObject {
 
     public func actionForGesture(_ gesture: GestureType) -> ActionTarget? {
         guard isEnabled else { return nil }
-
-        // Exact match first
-        if let direct = mappings.first(where: { $0.isEnabled && $0.gesture == gesture })?.action {
-            return direct
-        }
-
-        // Fallback for left/right sub-zone taps if general gesture is configured
-        switch gesture {
-        case .oneFingerDoubleTapLeft, .oneFingerDoubleTapRight:
-            return mappings.first(where: { $0.isEnabled && $0.gesture == .oneFingerDoubleTap })?.action
-        case .oneFingerTripleTapLeft, .oneFingerTripleTapRight:
-            return mappings.first(where: { $0.isEnabled && $0.gesture == .oneFingerTripleTap })?.action
-        default:
-            return nil
-        }
+        return mappings.first(where: { $0.isEnabled && $0.gesture == gesture })?.action
     }
 }

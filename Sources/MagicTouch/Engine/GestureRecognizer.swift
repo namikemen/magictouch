@@ -21,6 +21,13 @@ public struct TouchPoint: Identifiable, Equatable {
 public protocol GestureRecognizerDelegate: AnyObject {
     func gestureRecognizerDidDetect(gesture: GestureType)
     func gestureRecognizerDidUpdateTouches(touches: [TouchPoint])
+    func gestureRecognizerDidStartDrag()
+    func gestureRecognizerDidEndDrag()
+}
+
+public extension GestureRecognizerDelegate {
+    func gestureRecognizerDidStartDrag() {}
+    func gestureRecognizerDidEndDrag() {}
 }
 
 /// Gesture recognition state machine
@@ -52,11 +59,16 @@ public final class GestureRecognizer {
     private var hasTriggeredPinch: Bool = false
     private let pinchMinDelta: Float = 0.08
 
+    // Hold-to-drag tracking (Tap and hold 1 finger)
+    private var isDragging: Bool = false
+    private var isPotentialDragHold: Bool = false
+    private var potentialDragHoldStartTime: Double = 0
+
     // Thresholds tuned for Magic Mouse surface dimensions
     // 1-finger tap: tightened to prevent misclicks when resting finger or moving the mouse
-    private let oneFingerTapMinDuration: Double = 0.04   // seconds (filters micro-contact jitter)
-    private let oneFingerTapMaxDuration: Double = 0.28   // seconds (prevents misclick when resting finger)
-    private let oneFingerTapMaxMovement: Float = 0.065   // normalized distance (prevents misclick while moving mouse)
+    private let oneFingerTapMinDuration: Double = 0.05   // seconds (filters micro-contact jitter)
+    private let oneFingerTapMaxDuration: Double = 0.19   // seconds (prevents misclick when resting finger > 200ms)
+    private let oneFingerTapMaxMovement: Float = 0.038   // normalized distance (prevents misclick while moving mouse)
 
     // Multi-finger tap thresholds
     private let multiFingerTapMinDuration: Double = 0.035
@@ -127,9 +139,20 @@ public final class GestureRecognizer {
                     initialTouches[t.id] = t
                     touchDownTimes[t.id] = timestamp
                 }
+
+                // Check for Tap-and-Hold Drag: previous single tap lifted recently, now 1 finger down again
+                if activeFingers == 1 && (timestamp - lastTapTime) <= 0.32 && lastTapFingerCount == 1 {
+                    isPotentialDragHold = true
+                    potentialDragHoldStartTime = timestamp
+                } else {
+                    isPotentialDragHold = false
+                }
             } else {
                 if activeFingers > maxSimultaneousFingers {
                     maxSimultaneousFingers = activeFingers
+                }
+                if activeFingers != 1 {
+                    isPotentialDragHold = false
                 }
                 for t in touches {
                     if initialTouches[t.id] == nil {
@@ -204,12 +227,42 @@ public final class GestureRecognizer {
                 }
             }
 
+            // If held down for >= 130ms during tap-and-hold, engage drag!
+            if isPotentialDragHold && !isDragging && activeFingers == 1 {
+                if (timestamp - potentialDragHoldStartTime) >= 0.13 {
+                    isDragging = true
+                    delegate?.gestureRecognizerDidStartDrag()
+                    delegate?.gestureRecognizerDidDetect(gesture: .holdToDrag)
+                }
+            }
+
             currentTouches.removeAll()
             for t in touches {
                 currentTouches[t.id] = t
             }
         } else {
             // All fingers lifted: evaluate gesture session
+            if isDragging {
+                isDragging = false
+                isPotentialDragHold = false
+                delegate?.gestureRecognizerDidEndDrag()
+                consecutiveTapCount = 0
+                lastTapTime = 0
+                initialTouches.removeAll()
+                currentTouches.removeAll()
+                lastKnownTouches.removeAll()
+                touchDownTimes.removeAll()
+                touchPositionsAtTapDown.removeAll()
+                suppressedTouchIds.removeAll()
+                pendingTipTap = nil
+                initialSpread = nil
+                minSpreadDelta = 0
+                maxSpreadDelta = 0
+                hasTriggeredPinch = false
+                maxSimultaneousFingers = 0
+                return
+            }
+            isPotentialDragHold = false
             if let pending = pendingTipTap {
                 if timestamp - pending.detectedTime >= 0.10 {
                     delegate?.gestureRecognizerDidDetect(gesture: pending.gesture)
@@ -381,26 +434,17 @@ public final class GestureRecognizer {
             return
         }
 
-        // 2. 3-Finger Pinch In/Out
-        if fingerCount == 3 {
-            let centroidTranslation = hypot(avgDx, avgDy)
-            if minSpreadDelta <= -pinchMinDelta && centroidTranslation < 0.08 {
-                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchIn)
-                return
-            } else if maxSpreadDelta >= pinchMinDelta && centroidTranslation < 0.08 {
-                delegate?.gestureRecognizerDidDetect(gesture: .threeFingerPinchOut)
-                return
-            }
-        }
-
-        // 3. Check for Taps (Tuned to prevent 1-finger tap misclicks)
+        // 2. Check for Taps (Tuned to prevent 1-finger tap misclicks)
         let isTap: Bool
         if fingerCount == 1 {
-            // 1-finger tap: stricter time window (40ms - 280ms) and tight movement (< 0.065)
-            // This prevents misclicks when finger is resting on mouse or when hand moves the mouse
+            // 1-finger tap: strict time window (50ms - 190ms) and tight movement (< 0.038)
+            // Filters out resting palm/finger contacts where surface contact area is large (> 0.42)
+            let firstTouch = initialTouches.values.first
+            let touchSizeOk = (firstTouch?.totalSize ?? 0.0) <= 0.42
             isTap = duration >= oneFingerTapMinDuration &&
                     duration <= oneFingerTapMaxDuration &&
-                    distance < oneFingerTapMaxMovement
+                    distance < oneFingerTapMaxMovement &&
+                    touchSizeOk
         } else {
             // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&
@@ -483,12 +527,6 @@ public final class GestureRecognizer {
     private func dispatchDoubleTap(fingerCount: Int) {
         switch fingerCount {
         case 1:
-            let tapX = initialTouches.values.first?.x ?? (currentTouches.values.first?.x ?? 0.5)
-            if tapX < 0.50 {
-                delegate?.gestureRecognizerDidDetect(gesture: .oneFingerDoubleTapLeft)
-            } else {
-                delegate?.gestureRecognizerDidDetect(gesture: .oneFingerDoubleTapRight)
-            }
             delegate?.gestureRecognizerDidDetect(gesture: .oneFingerDoubleTap)
         case 2:
             delegate?.gestureRecognizerDidDetect(gesture: .twoFingerDoubleTap)
@@ -502,12 +540,6 @@ public final class GestureRecognizer {
     private func dispatchTripleTap(fingerCount: Int) {
         switch fingerCount {
         case 1:
-            let tapX = initialTouches.values.first?.x ?? (currentTouches.values.first?.x ?? 0.5)
-            if tapX < 0.50 {
-                delegate?.gestureRecognizerDidDetect(gesture: .oneFingerTripleTapLeft)
-            } else {
-                delegate?.gestureRecognizerDidDetect(gesture: .oneFingerTripleTapRight)
-            }
             delegate?.gestureRecognizerDidDetect(gesture: .oneFingerTripleTap)
         case 2:
             delegate?.gestureRecognizerDidDetect(gesture: .twoFingerTripleTap)

@@ -6,11 +6,8 @@ public enum GestureType: String, Codable, CaseIterable, Identifiable {
     case oneFingerTapLeft = "1-Finger Tap Left"
     case oneFingerTapRight = "1-Finger Tap Right"
     case oneFingerDoubleTap = "1-Finger Double Tap"
-    case oneFingerDoubleTapLeft = "1-Finger Double Tap Left"
-    case oneFingerDoubleTapRight = "1-Finger Double Tap Right"
     case oneFingerTripleTap = "1-Finger Triple Tap"
-    case oneFingerTripleTapLeft = "1-Finger Triple Tap Left"
-    case oneFingerTripleTapRight = "1-Finger Triple Tap Right"
+    case holdToDrag = "Hold to Drag (Tap & Hold)"
     case oneFingerClick = "1-Finger Click"
     case oneFingerSwipeLeft = "1-Finger Swipe Left"
     case oneFingerSwipeRight = "1-Finger Swipe Right"
@@ -40,8 +37,6 @@ public enum GestureType: String, Codable, CaseIterable, Identifiable {
     case threeFingerSwipeRight = "3-Finger Swipe Right"
     case threeFingerSwipeUp = "3-Finger Swipe Up"
     case threeFingerSwipeDown = "3-Finger Swipe Down"
-    case threeFingerPinchIn = "3-Finger Pinch In"
-    case threeFingerPinchOut = "3-Finger Pinch Out"
 
     // 4-Finger Gestures
     case fourFingerTap = "4-Finger Tap"
@@ -56,12 +51,23 @@ public enum GestureType: String, Codable, CaseIterable, Identifiable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        if raw == "1-Finger Tap" {
+        switch raw {
+        case "1-Finger Tap":
             self = .oneFingerTapLeft
-        } else if let val = GestureType(rawValue: raw) {
-            self = val
-        } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown gesture: \(raw)")
+        case "1-Finger Double Tap Left", "1-Finger Double Tap Right":
+            self = .oneFingerDoubleTap
+        case "1-Finger Triple Tap Left", "1-Finger Triple Tap Right":
+            self = .oneFingerTripleTap
+        case "3-Finger Pinch In":
+            self = .twoFingerPinchIn
+        case "3-Finger Pinch Out":
+            self = .twoFingerPinchOut
+        default:
+            if let val = GestureType(rawValue: raw) {
+                self = val
+            } else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown gesture: \(raw)")
+            }
         }
     }
 
@@ -73,9 +79,7 @@ public enum GestureType: String, Codable, CaseIterable, Identifiable {
     public var fingerCount: Int {
         switch self {
         case .oneFingerTapLeft, .oneFingerTapRight, .oneFingerDoubleTap,
-             .oneFingerDoubleTapLeft, .oneFingerDoubleTapRight,
-             .oneFingerTripleTap, .oneFingerTripleTapLeft, .oneFingerTripleTapRight,
-             .oneFingerClick,
+             .oneFingerTripleTap, .holdToDrag, .oneFingerClick,
              .oneFingerSwipeLeft, .oneFingerSwipeRight, .oneFingerSwipeUp, .oneFingerSwipeDown:
             return 1
         case .twoFingerTap, .twoFingerDoubleTap, .twoFingerTripleTap, .twoFingerClick,
@@ -83,8 +87,7 @@ public enum GestureType: String, Codable, CaseIterable, Identifiable {
              .twoFingerPinchIn, .twoFingerPinchOut, .tipTapLeft, .tipTapRight:
             return 2
         case .threeFingerTap, .threeFingerDoubleTap, .threeFingerTripleTap, .threeFingerClick,
-             .threeFingerSwipeLeft, .threeFingerSwipeRight, .threeFingerSwipeUp, .threeFingerSwipeDown,
-             .threeFingerPinchIn, .threeFingerPinchOut:
+             .threeFingerSwipeLeft, .threeFingerSwipeRight, .threeFingerSwipeUp, .threeFingerSwipeDown:
             return 3
         case .fourFingerTap, .fourFingerClick,
              .fourFingerSwipeLeft, .fourFingerSwipeRight, .fourFingerSwipeUp, .fourFingerSwipeDown:
@@ -123,6 +126,7 @@ public enum MouseButtonType: String, Codable, CaseIterable {
     case middleClick = "Middle Click (Button 3)"
     case doubleClick = "Double Click"
     case tripleClick = "Triple Click (Select Line)"
+    case leftDrag = "Left Mouse Drag (Hold to Drag)"
     case back = "Back (Button 4)"
     case forward = "Forward (Button 5)"
 }

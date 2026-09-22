@@ -38,7 +38,22 @@ public final class PermissionManager: ObservableObject {
                 DispatchQueue.main.async {
                     self.hasAccessibility = acc
                     self.hasInputMonitoring = inp
+                    if acc {
+                        // Dynamically re-hook CGEventTap if accessibility was just granted
+                        MultitouchManager.activeInstance?.restartClickInterceptorIfNeeded()
+                    }
                 }
+            }
+        }
+    }
+
+    public func restartApp() {
+        let bundleURL = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: bundleURL, configuration: config) { _, _ in
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
             }
         }
     }

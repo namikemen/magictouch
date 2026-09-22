@@ -66,7 +66,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
             popover.performClose(nil)
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
@@ -93,5 +92,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
             self.appState.isConnected = connected
             self.appState.deviceName = deviceName
         }
+    }
+
+    func multitouchManagerDidStartDrag() {
+        // If the user has a custom action mapped to holdToDrag, that gets triggered in didDetect;
+        // otherwise, startLeftDrag natively initiates macOS left click drag.
+        if configStore.actionForGesture(.holdToDrag) == nil {
+            actionDispatcher.startLeftDrag()
+        }
+    }
+
+    func multitouchManagerDidEndDrag() {
+        actionDispatcher.endLeftDrag()
     }
 }
