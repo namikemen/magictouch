@@ -94,10 +94,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
         if let action = configStore.actionForGesture(gesture) {
             actionDispatcher.execute(action: action)
         } else if gesture == .oneFingerDoubleTap {
-            // User did not map 1-Finger Double Tap: fall back to single tap action
-            // so standard double-clicking/tapping functions naturally without eating taps!
+            // User did not map 1-Finger Double Tap: fall back to single tap action with clickState = 2
+            // so standard double-clicking/tapping functions naturally as a native double click!
             if let fallbackAction = configStore.actionForGesture(lastSingleTapGesture) {
-                actionDispatcher.execute(action: fallbackAction)
+                actionDispatcher.execute(action: fallbackAction, clickState: 2)
+            }
+        } else if gesture == .oneFingerTripleTap {
+            // User did not map 1-Finger Triple Tap: fall back to single tap action with clickState = 3
+            if let fallbackAction = configStore.actionForGesture(lastSingleTapGesture) {
+                actionDispatcher.execute(action: fallbackAction, clickState: 3)
             }
         }
     }

@@ -65,8 +65,8 @@ public final class GestureRecognizer {
     private var potentialDragHoldStartTime: Double = 0
 
     // Thresholds tuned for Magic Mouse surface dimensions
-    private let oneFingerTapMinDuration: Double = 0.04   // seconds (filters micro-contact jitter)
-    private let oneFingerTapMaxDuration: Double = 0.30   // seconds
+    private let oneFingerTapMinDuration: Double = 0.025  // seconds (captures light/fast taps reliably)
+    private let oneFingerTapMaxDuration: Double = 0.32   // seconds
     private let oneFingerTapMaxMovement: Float = 0.065   // normalized distance
 
     // Multi-finger tap thresholds
@@ -469,14 +469,12 @@ public final class GestureRecognizer {
         if fingerCount == 1 {
             let maxExcursion = initialTouches.keys.compactMap { maxExcursionFromStart[$0] }.max() ?? distance
             let totalPath = initialTouches.keys.compactMap { totalPathDistance[$0] }.max() ?? distance
-            let wasScrolling = hasScrolledInCurrentSession || (timestamp - lastScrollTime) < 0.25
 
-            isTap = !wasScrolling &&
-                    duration >= oneFingerTapMinDuration &&
+            isTap = duration >= oneFingerTapMinDuration &&
                     duration <= oneFingerTapMaxDuration &&
                     distance < oneFingerTapMaxMovement &&
-                    maxExcursion < 0.045 &&
-                    totalPath < 0.050
+                    maxExcursion < 0.065 &&
+                    totalPath < 0.080
         } else {
             // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&

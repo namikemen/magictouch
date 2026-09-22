@@ -10,11 +10,11 @@ public final class ActionDispatcher {
 
     private init() {}
 
-    public func execute(action: ActionTarget) {
+    public func execute(action: ActionTarget, clickState: Int = 1) {
         DispatchQueue.main.async {
             switch action {
             case .mouseButton(let button):
-                self.triggerMouseButton(button)
+                self.triggerMouseButton(button, clickState: clickState)
             case .keyboardShortcut(let modifiers, let keyCode, _):
                 self.triggerKeystroke(modifiers: modifiers, keyCode: keyCode)
             case .appleScript(let script):
@@ -47,7 +47,7 @@ public final class ActionDispatcher {
     }
 
     // MARK: - Mouse Simulation
-    private func triggerMouseButton(_ button: MouseButtonType) {
+    private func triggerMouseButton(_ button: MouseButtonType, clickState: Int = 1) {
         guard let location = CGEvent(source: nil)?.location else { return }
 
         switch button {
@@ -99,6 +99,8 @@ public final class ActionDispatcher {
 
         if let downEvent = CGEvent(mouseEventSource: nil, mouseType: mouseTypeDown, mouseCursorPosition: location, mouseButton: mouseButton),
            let upEvent = CGEvent(mouseEventSource: nil, mouseType: mouseTypeUp, mouseCursorPosition: location, mouseButton: mouseButton) {
+            downEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
+            upEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
             downEvent.post(tap: .cghidEventTap)
             usleep(10000) // 10ms hold
             upEvent.post(tap: .cghidEventTap)
