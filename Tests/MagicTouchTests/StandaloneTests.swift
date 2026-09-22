@@ -226,9 +226,9 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.5, y: 0.5, totalSize: 0.2)], timestamp: 10.0)
         recognizer.processFrame(touches: [], timestamp: 10.08)
 
-        // Step 2: Touch down again within 200ms and hold for 140ms
+        // Step 2: Touch down again within 200ms and hold for >= 220ms
         recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.5, y: 0.5, totalSize: 0.25)], timestamp: 10.20)
-        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.52, y: 0.51, totalSize: 0.25)], timestamp: 10.35)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.52, y: 0.51, totalSize: 0.25)], timestamp: 10.43)
 
         assertEqual(lastDetectedGesture, .holdToDrag, "Detected Hold to Drag on tap-and-hold")
 

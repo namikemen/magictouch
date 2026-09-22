@@ -65,10 +65,9 @@ public final class GestureRecognizer {
     private var potentialDragHoldStartTime: Double = 0
 
     // Thresholds tuned for Magic Mouse surface dimensions
-    // 1-finger tap: tightened to prevent misclicks when resting finger or moving the mouse
-    private let oneFingerTapMinDuration: Double = 0.05   // seconds (filters micro-contact jitter)
-    private let oneFingerTapMaxDuration: Double = 0.19   // seconds (prevents misclick when resting finger > 200ms)
-    private let oneFingerTapMaxMovement: Float = 0.038   // normalized distance (prevents misclick while moving mouse)
+    private let oneFingerTapMinDuration: Double = 0.04   // seconds (filters micro-contact jitter)
+    private let oneFingerTapMaxDuration: Double = 0.30   // seconds
+    private let oneFingerTapMaxMovement: Float = 0.065   // normalized distance
 
     // Multi-finger tap thresholds
     private let multiFingerTapMinDuration: Double = 0.035
@@ -227,9 +226,9 @@ public final class GestureRecognizer {
                 }
             }
 
-            // If held down for >= 130ms during tap-and-hold, engage drag!
+            // If held down for >= 220ms during tap-and-hold, engage drag!
             if isPotentialDragHold && !isDragging && activeFingers == 1 {
-                if (timestamp - potentialDragHoldStartTime) >= 0.13 {
+                if (timestamp - potentialDragHoldStartTime) >= 0.22 {
                     isDragging = true
                     delegate?.gestureRecognizerDidStartDrag()
                     delegate?.gestureRecognizerDidDetect(gesture: .holdToDrag)
@@ -434,17 +433,12 @@ public final class GestureRecognizer {
             return
         }
 
-        // 2. Check for Taps (Tuned to prevent 1-finger tap misclicks)
+        // 2. Check for Taps
         let isTap: Bool
         if fingerCount == 1 {
-            // 1-finger tap: strict time window (50ms - 190ms) and tight movement (< 0.038)
-            // Filters out resting palm/finger contacts where surface contact area is large (> 0.42)
-            let firstTouch = initialTouches.values.first
-            let touchSizeOk = (firstTouch?.totalSize ?? 0.0) <= 0.42
             isTap = duration >= oneFingerTapMinDuration &&
                     duration <= oneFingerTapMaxDuration &&
-                    distance < oneFingerTapMaxMovement &&
-                    touchSizeOk
+                    distance < oneFingerTapMaxMovement
         } else {
             // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&
