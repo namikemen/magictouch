@@ -8,6 +8,9 @@ public final class ActionDispatcher {
 
     private var isDragging = false
 
+    public static let magicEventSignature: Int64 = 0x4D41474943 // "MAGIC"
+    public static var isSynthesizingEvent: Bool = false
+
     private init() {}
 
     public func execute(action: ActionTarget, clickState: Int = 1) {
@@ -32,7 +35,10 @@ public final class ActionDispatcher {
         guard !isDragging else { return }
         guard let location = CGEvent(source: nil)?.location else { return }
         if let downEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: location, mouseButton: .left) {
+            downEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
+            ActionDispatcher.isSynthesizingEvent = true
             downEvent.post(tap: .cghidEventTap)
+            ActionDispatcher.isSynthesizingEvent = false
             isDragging = true
         }
     }
@@ -41,7 +47,10 @@ public final class ActionDispatcher {
         guard isDragging else { return }
         guard let location = CGEvent(source: nil)?.location else { return }
         if let upEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: location, mouseButton: .left) {
+            upEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
+            ActionDispatcher.isSynthesizingEvent = true
             upEvent.post(tap: .cghidEventTap)
+            ActionDispatcher.isSynthesizingEvent = false
             isDragging = false
         }
     }
@@ -52,10 +61,18 @@ public final class ActionDispatcher {
 
         switch button {
         case .doubleClick:
-            triggerMultiClick(count: 2, location: location)
+            if clickState >= 2 {
+                triggerSingleClick(typeDown: .leftMouseDown, typeUp: .leftMouseUp, button: .left, location: location, clickState: 2)
+            } else {
+                triggerMultiClick(count: 2, location: location)
+            }
             return
         case .tripleClick:
-            triggerMultiClick(count: 3, location: location)
+            if clickState >= 3 {
+                triggerSingleClick(typeDown: .leftMouseDown, typeUp: .leftMouseUp, button: .left, location: location, clickState: 3)
+            } else {
+                triggerMultiClick(count: 3, location: location)
+            }
             return
         case .leftDrag:
             if isDragging {
@@ -97,22 +114,37 @@ public final class ActionDispatcher {
             return
         }
 
-        if let downEvent = CGEvent(mouseEventSource: nil, mouseType: mouseTypeDown, mouseCursorPosition: location, mouseButton: mouseButton),
-           let upEvent = CGEvent(mouseEventSource: nil, mouseType: mouseTypeUp, mouseCursorPosition: location, mouseButton: mouseButton) {
-            downEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
-            upEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
-            downEvent.post(tap: .cghidEventTap)
-            usleep(10000) // 10ms hold
-            upEvent.post(tap: .cghidEventTap)
+        triggerSingleClick(typeDown: mouseTypeDown, typeUp: mouseTypeUp, button: mouseButton, location: location, clickState: clickState)
+    }
+
+    private func triggerSingleClick(typeDown: CGEventType, typeUp: CGEventType, button: CGMouseButton, location: CGPoint, clickState: Int) {
+        guard let downEvent = CGEvent(mouseEventSource: nil, mouseType: typeDown, mouseCursorPosition: location, mouseButton: button),
+              let upEvent = CGEvent(mouseEventSource: nil, mouseType: typeUp, mouseCursorPosition: location, mouseButton: button) else {
+            return
         }
+
+        downEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
+        upEvent.setIntegerValueField(.mouseEventClickState, value: Int64(clickState))
+        downEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
+        upEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
+
+        ActionDispatcher.isSynthesizingEvent = true
+        downEvent.post(tap: .cghidEventTap)
+        usleep(10000) // 10ms hold
+        upEvent.post(tap: .cghidEventTap)
+        ActionDispatcher.isSynthesizingEvent = false
     }
 
     private func triggerMultiClick(count: Int, location: CGPoint) {
+        ActionDispatcher.isSynthesizingEvent = true
+        defer { ActionDispatcher.isSynthesizingEvent = false }
         for i in 1...count {
             if let downEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: location, mouseButton: .left),
                let upEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: location, mouseButton: .left) {
                 downEvent.setIntegerValueField(.mouseEventClickState, value: Int64(i))
                 upEvent.setIntegerValueField(.mouseEventClickState, value: Int64(i))
+                downEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
+                upEvent.setIntegerValueField(.eventSourceUserData, value: ActionDispatcher.magicEventSignature)
                 downEvent.post(tap: .cghidEventTap)
                 usleep(10000) // 10ms hold
                 upEvent.post(tap: .cghidEventTap)

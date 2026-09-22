@@ -142,13 +142,14 @@ public final class GestureRecognizer {
                 // New gesture session began
                 touchStartTime = timestamp
                 maxSimultaneousFingers = activeFingers
+                hasPhysicalClickedInCurrentSession = false
                 for t in touches {
                     initialTouches[t.id] = t
                     touchDownTimes[t.id] = timestamp
                 }
 
                 // Check for Tap-and-Hold Drag: previous single tap lifted recently, now 1 finger down again
-                if activeFingers == 1 && (timestamp - lastTapTime) <= 0.32 && lastTapFingerCount == 1 {
+                if activeFingers == 1 && (timestamp - lastTapTime) <= 0.42 && lastTapFingerCount == 1 {
                     isPotentialDragHold = true
                     potentialDragHoldStartTime = timestamp
                 } else {
@@ -471,10 +472,10 @@ public final class GestureRecognizer {
             let totalPath = initialTouches.keys.compactMap { totalPathDistance[$0] }.max() ?? distance
 
             isTap = duration >= oneFingerTapMinDuration &&
-                    duration <= oneFingerTapMaxDuration &&
-                    distance < oneFingerTapMaxMovement &&
-                    maxExcursion < 0.065 &&
-                    totalPath < 0.080
+                    duration <= 0.35 &&
+                    distance < 0.070 &&
+                    maxExcursion < 0.070 &&
+                    totalPath < 0.090
         } else {
             // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&
@@ -483,7 +484,7 @@ public final class GestureRecognizer {
         }
 
         if isTap {
-            if (timestamp - lastTapTime) < 0.35 && lastTapFingerCount == fingerCount {
+            if (timestamp - lastTapTime) < 0.42 && lastTapFingerCount == fingerCount {
                 // Reject rapid capacitive contact bounce (< 120ms) for multi-finger taps
                 if (timestamp - lastTapTime) < 0.12 && fingerCount >= 2 {
                     return
@@ -586,7 +587,9 @@ public final class GestureRecognizer {
 
     /// Process a physical mouse click intercepted via CGEventTap or mouse hook
     public func processPhysicalClick() {
-        hasPhysicalClickedInCurrentSession = true
+        if !currentTouches.isEmpty || !initialTouches.isEmpty {
+            hasPhysicalClickedInCurrentSession = true
+        }
         let fingers = currentTouches.count > 0 ? currentTouches.count : maxSimultaneousFingers
         switch fingers {
         case 1:

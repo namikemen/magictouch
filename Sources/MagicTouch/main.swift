@@ -92,7 +92,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
 
         // Check if user has an assigned action for this gesture
         if let action = configStore.actionForGesture(gesture) {
-            actionDispatcher.execute(action: action)
+            let clickState = (gesture == .oneFingerDoubleTap) ? 2 : ((gesture == .oneFingerTripleTap) ? 3 : 1)
+            actionDispatcher.execute(action: action, clickState: clickState)
         } else if gesture == .oneFingerDoubleTap {
             // User did not map 1-Finger Double Tap: fall back to single tap action with clickState = 2
             // so standard double-clicking/tapping functions naturally as a native double click!

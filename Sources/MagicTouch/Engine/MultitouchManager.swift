@@ -90,6 +90,7 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             if let dev = MTBridgeGetDeviceAtIndex(i) {
                 let builtIn = MTBridgeDeviceIsBuiltIn(dev)
                 print("[MagicTouch] Device \(i): \(dev), builtIn: \(builtIn)")
+                fflush(stdout)
                 if !builtIn {
                     targetDevice = dev
                     isExternal = true
@@ -109,8 +110,11 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             MTBridgeStartDevice(device, multitouchCallback)
             let devName = isExternal ? "Apple Magic Mouse (Connected)" : "Internal Trackpad"
             print("[MagicTouch] Successfully bound to: \(devName)")
+            fflush(stdout)
             delegate?.multitouchManagerDeviceStatusChanged(connected: true, deviceName: devName)
         } else {
+            print("[MagicTouch] No multitouch device found")
+            fflush(stdout)
             delegate?.multitouchManagerDeviceStatusChanged(connected: false, deviceName: "No Multitouch Device Found")
         }
     }
@@ -136,6 +140,13 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             options: .defaultTap,
             eventsOfInterest: CGEventMask(mask),
             callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
+                // Filter out MagicTouch's own synthesized clicks
+                if event.getIntegerValueField(.eventSourceUserData) == ActionDispatcher.magicEventSignature {
+                    return Unmanaged.passRetained(event)
+                }
+                if ActionDispatcher.isSynthesizingEvent {
+                    return Unmanaged.passRetained(event)
+                }
                 if let refcon = refcon {
                     let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
                     mgr.recognizer.processPhysicalClick()
@@ -145,6 +156,7 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
             print("[MagicTouch] Note: CGEvent tap requires Accessibility Permissions to intercept physical clicks.")
+            fflush(stdout)
             return
         }
 

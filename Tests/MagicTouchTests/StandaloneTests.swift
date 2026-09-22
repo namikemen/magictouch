@@ -679,6 +679,25 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .oneFingerDoubleTap, "Tap 2 detected as oneFingerDoubleTap")
         assertEqual(detectedGestures.count, 2, "Both taps dispatched in sequence")
     }
+
+    func testPhysicalClickOutsideTouchesDoesNotSuppressSubsequentTap() {
+        print("Running: Physical Click Outside Touches Does NOT Suppress Subsequent Tap...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // 1. A physical click event occurs when fingers are NOT touching surface
+        // (e.g. synthesized click or past click before touch begins)
+        recognizer.processPhysicalClick()
+
+        // 2. User then performs a clean 1-finger tap
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.50)], timestamp: 90.0)
+        recognizer.processFrame(touches: [], timestamp: 90.08)
+
+        assertEqual(lastDetectedGesture, .oneFingerTapLeft, "Tap after external click is NOT suppressed")
+        assertEqual(detectedGestures.count, 1, "Exactly 1 gesture detected for the tap")
+    }
 }
 
 @main
@@ -698,6 +717,7 @@ struct RunnerApp {
         runner.testThreeFingerTapBounceDebounce()
         runner.testScrollDoesNotTriggerTap()
         runner.testOneFingerDoubleTapDetection()
+        runner.testPhysicalClickOutsideTouchesDoesNotSuppressSubsequentTap()
         runner.testTwoFingerSwipeRightDetection()
         runner.testTwoFingerSwipeLeftWithNaturalCompressionNotPinchIn()
         runner.testTwoFingerSwipeLeftWithAsynchronousFingerLiftNotPinchIn()
@@ -715,6 +735,6 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 30 MagicTouch test suites passed successfully!")
+        print("🎉 All 31 MagicTouch test suites passed successfully!")
     }
 }
