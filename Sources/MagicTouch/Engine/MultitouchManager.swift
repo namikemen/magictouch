@@ -31,13 +31,6 @@ private func multitouchCallback(device: MTDeviceRef?, touches: UnsafeMutablePoin
     return 0
 }
 
-/// Callback triggered by IOHIDManager when devices connect or disconnect
-private func deviceListChangedCallback() {
-    DispatchQueue.main.async {
-        MultitouchManager.activeInstance?.handleDeviceListChanged()
-    }
-}
-
 public protocol MultitouchManagerDelegate: AnyObject {
     func multitouchManagerDidDetect(gesture: GestureType)
     func multitouchManagerDidUpdateTouches(touches: [TouchPoint])
@@ -59,9 +52,10 @@ public final class MultitouchManager: GestureRecognizerDelegate {
     private var isRunning = false
     private var activeDevice: MTDeviceRef?
     private var isExternalDeviceActive = false
+    private var lastKnownExternalDeviceCount = -1
+    private var lastKnownTotalDeviceCount = -1
     private var clickEventTap: CFMachPort?
     private var watchdogTimer: Timer?
-    private var reconnectWorkItem: DispatchWorkItem?
 
     public init() {
         self.recognizer = GestureRecognizer()
@@ -73,7 +67,6 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         guard !isRunning else { return }
         isRunning = true
         registerSystemNotifications()
-        MTBridgeRegisterDeviceListChangedCallback(deviceListChangedCallback)
         startMultitouchDevice()
         startClickInterceptor()
         startWatchdog()
@@ -86,6 +79,39 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         unregisterSystemNotifications()
         stopMultitouchDevice()
         stopClickInterceptor()
+    }
+
+    // MARK: - Device Scanning
+    private struct DeviceScanResult {
+        let externalDevice: MTDeviceRef?
+        let builtInDevice: MTDeviceRef?
+        let externalCount: Int
+        let totalCount: Int
+    }
+
+    private func scanDevices() -> DeviceScanResult {
+        MTBridgeRefreshDevices()
+        let count = MTBridgeGetDeviceCount()
+        var extDev: MTDeviceRef?
+        var builtInDev: MTDeviceRef?
+        var extCount = 0
+
+        for i in 0..<count {
+            if let dev = MTBridgeGetDeviceAtIndex(i) {
+                if MTBridgeDeviceIsBuiltIn(dev) {
+                    if builtInDev == nil { builtInDev = dev }
+                } else {
+                    extCount += 1
+                    if extDev == nil { extDev = dev }
+                }
+            }
+        }
+        return DeviceScanResult(
+            externalDevice: extDev,
+            builtInDevice: builtInDev,
+            externalCount: extCount,
+            totalCount: count
+        )
     }
 
     // MARK: - System Sleep & Wake Lifecycle
@@ -104,112 +130,59 @@ public final class MultitouchManager: GestureRecognizerDelegate {
     }
 
     @objc private func systemWillSleep() {
-        print("[MagicTouch] Mac going to sleep. Stopping multitouch device...")
+        print("[MagicTouch] Mac going to sleep. Stopping multitouch...")
         fflush(stdout)
+        lastKnownExternalDeviceCount = -1
+        lastKnownTotalDeviceCount = -1
         stopMultitouchDevice()
         delegate?.multitouchManagerDeviceStatusChanged(connected: false, deviceName: "Mac Sleeping")
     }
 
     @objc private func systemDidWake() {
-        print("[MagicTouch] Mac woke up. Re-enabling click interceptor & reconnecting...")
+        print("[MagicTouch] Mac woke up. Re-enabling click interceptor & scheduling reconnection...")
         fflush(stdout)
         reEnableClickInterceptor()
+        lastKnownExternalDeviceCount = -1
+        lastKnownTotalDeviceCount = -1
 
         // Bluetooth devices often take 1 - 3 seconds after wake to re-establish connection.
         // Stagger reconnect attempts:
-        for delay in [0.5, 1.5, 3.0, 5.0] {
+        for delay in [0.8, 2.0, 3.5] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self = self, self.isRunning else { return }
                 self.reEnableClickInterceptor()
-                self.refreshDeviceConnection()
+                self.checkDeviceStatus()
             }
         }
-    }
-
-    // MARK: - Device Hotplug Handling
-    fileprivate func handleDeviceListChanged() {
-        reconnectWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self = self, self.isRunning else { return }
-            self.refreshDeviceConnection()
-        }
-        reconnectWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
-    }
-
-    public func refreshDeviceConnection() {
-        guard isRunning else { return }
-        MTBridgeRefreshDevices()
-        let count = MTBridgeGetDeviceCount()
-
-        var externalDev: MTDeviceRef?
-        for i in 0..<count {
-            if let dev = MTBridgeGetDeviceAtIndex(i), !MTBridgeDeviceIsBuiltIn(dev) {
-                externalDev = dev
-                break
-            }
-        }
-
-        // If we already hold an external device, verify it's still alive & running
-        if let current = activeDevice, isExternalDeviceActive {
-            let isAlive = MTBridgeDeviceIsAlive(current)
-            let isRunning = MTBridgeDeviceIsRunning(current)
-            if let ext = externalDev, ext == current, isAlive, isRunning {
-                // Device is still active and healthy, no reconnect needed
-                return
-            }
-        }
-
-        print("[MagicTouch] Device configuration changed (found \(count) devices). Re-binding...")
-        fflush(stdout)
-        stopMultitouchDevice()
-        startMultitouchDevice()
     }
 
     // MARK: - Multitouch Device Lifecycle
     private func startMultitouchDevice() {
-        MTBridgeRefreshDevices()
-        let count = MTBridgeGetDeviceCount()
-        print("[MagicTouch] Total multitouch devices found: \(count)")
+        let scan = scanDevices()
+        self.lastKnownExternalDeviceCount = scan.externalCount
+        self.lastKnownTotalDeviceCount = scan.totalCount
+
+        print("[MagicTouch] Total multitouch devices found: \(scan.totalCount) (External: \(scan.externalCount))")
         fflush(stdout)
 
-        if count == 0 {
-            delegate?.multitouchManagerDeviceStatusChanged(connected: false, deviceName: "No devices found")
-            return
-        }
-
-        var targetDevice: MTDeviceRef?
-        var isExternal = false
-
-        // First pass: find external device (Magic Mouse or external Trackpad)
-        for i in 0..<count {
-            if let dev = MTBridgeGetDeviceAtIndex(i) {
-                let builtIn = MTBridgeDeviceIsBuiltIn(dev)
-                print("[MagicTouch] Device \(i): \(dev), builtIn: \(builtIn)")
-                fflush(stdout)
-                if !builtIn {
-                    targetDevice = dev
-                    isExternal = true
-                    break
-                }
-            }
-        }
-
-        // Fallback: use first device if no external is found
-        if targetDevice == nil {
-            targetDevice = MTBridgeGetDeviceAtIndex(0)
-            isExternal = false
-        }
-
-        if let device = targetDevice {
-            self.activeDevice = device
-            self.isExternalDeviceActive = isExternal
-            MTBridgeStartDevice(device, multitouchCallback)
-            let devName = isExternal ? "Apple Magic Mouse (Connected)" : "Internal Trackpad"
+        if let ext = scan.externalDevice {
+            self.activeDevice = ext
+            self.isExternalDeviceActive = true
+            MTBridgeStartDevice(ext, multitouchCallback)
+            let devName = "Apple Magic Mouse (Connected)"
             print("[MagicTouch] Successfully bound to: \(devName)")
             fflush(stdout)
             delegate?.multitouchManagerDeviceStatusChanged(connected: true, deviceName: devName)
+        } else if let builtIn = scan.builtInDevice {
+            self.activeDevice = builtIn
+            self.isExternalDeviceActive = false
+            MTBridgeStartDevice(builtIn, multitouchCallback)
+            let devName = "Internal Trackpad"
+            print("[MagicTouch] Bound to fallback: \(devName)")
+            fflush(stdout)
+            delegate?.multitouchManagerDeviceStatusChanged(connected: true, deviceName: devName)
         } else {
+            self.activeDevice = nil
             self.isExternalDeviceActive = false
             print("[MagicTouch] No multitouch device found")
             fflush(stdout)
@@ -228,8 +201,8 @@ public final class MultitouchManager: GestureRecognizerDelegate {
     // MARK: - Watchdog Timer
     private func startWatchdog() {
         stopWatchdog()
-        watchdogTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            self?.watchdogTick()
+        watchdogTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.checkDeviceStatus()
         }
     }
 
@@ -238,34 +211,28 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         watchdogTimer = nil
     }
 
-    private func watchdogTick() {
+    private func checkDeviceStatus() {
         guard isRunning else { return }
         reEnableClickInterceptor()
 
-        if let device = activeDevice {
-            let alive = MTBridgeDeviceIsAlive(device)
-            let running = MTBridgeDeviceIsRunning(device)
-            if !alive || !running {
-                print("[MagicTouch] Active device became unresponsive (alive: \(alive), running: \(running)). Reconnecting...")
-                fflush(stdout)
-                refreshDeviceConnection()
-                return
-            }
+        let scan = scanDevices()
 
-            // If currently on fallback built-in trackpad, check if external mouse has appeared
-            if !isExternalDeviceActive {
-                let count = MTBridgeGetDeviceCount()
-                for i in 0..<count {
-                    if let dev = MTBridgeGetDeviceAtIndex(i), !MTBridgeDeviceIsBuiltIn(dev) {
-                        print("[MagicTouch] External mouse detected while on fallback. Switching to Magic Mouse...")
-                        fflush(stdout)
-                        refreshDeviceConnection()
-                        return
-                    }
-                }
-            }
-        } else {
-            refreshDeviceConnection()
+        // 1. Has the count of external devices changed?
+        // (e.g. Magic Mouse was switched off: extCount 1 -> 0, or switched on: extCount 0 -> 1)
+        if scan.externalCount != lastKnownExternalDeviceCount {
+            print("[MagicTouch] External device change detected (\(lastKnownExternalDeviceCount) -> \(scan.externalCount)). Updating connection...")
+            fflush(stdout)
+            stopMultitouchDevice()
+            startMultitouchDevice()
+            return
+        }
+
+        // 2. If we are currently not bound to any device, but devices exist, bind!
+        if activeDevice == nil && scan.totalCount > 0 {
+            print("[MagicTouch] Multitouch device available. Binding...")
+            fflush(stdout)
+            startMultitouchDevice()
+            return
         }
     }
 
@@ -283,7 +250,7 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             options: .defaultTap,
             eventsOfInterest: CGEventMask(mask),
             callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
-                // Handle system-disabled taps (e.g. timeout or high load during sleep/wake)
+                // Handle system-disabled taps (e.g. timeout during sleep or high load)
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                     if let refcon = refcon {
                         let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()

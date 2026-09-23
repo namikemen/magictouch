@@ -47,7 +47,6 @@ typedef struct {
 typedef void *MTDeviceRef;
 
 typedef int (*MTContactCallbackFunction)(MTDeviceRef device, MTTouch *touches, int numTouches, double timestamp, int frame);
-typedef void (*MTDeviceListChangedCallback)(void);
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,19 +60,14 @@ void MTDeviceStop(MTDeviceRef device);
 bool MTDeviceIsAvailable(void);
 bool MTDeviceIsBuiltIn(MTDeviceRef device);
 int MTDeviceGetFamilyID(MTDeviceRef device);
-bool MTDeviceIsAlive(MTDeviceRef device);
-bool MTDeviceIsRunning(MTDeviceRef device);
 
 // Robust Swift helper functions
 CFIndex MTBridgeGetDeviceCount(void);
 MTDeviceRef MTBridgeGetDeviceAtIndex(CFIndex index);
 bool MTBridgeDeviceIsBuiltIn(MTDeviceRef device);
-bool MTBridgeDeviceIsAlive(MTDeviceRef device);
-bool MTBridgeDeviceIsRunning(MTDeviceRef device);
 void MTBridgeStartDevice(MTDeviceRef device, MTContactCallbackFunction callback);
 void MTBridgeStopDevice(MTDeviceRef device, MTContactCallbackFunction callback);
 void MTBridgeRefreshDevices(void);
-void MTBridgeRegisterDeviceListChangedCallback(MTDeviceListChangedCallback callback);
 
 #ifdef __cplusplus
 }
