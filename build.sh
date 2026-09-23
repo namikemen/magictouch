@@ -26,6 +26,7 @@ swiftc \
   -framework AppKit \
   -framework SwiftUI \
   -framework CoreGraphics \
+  -framework IOKit \
   -I Sources/MultitouchBridge/include \
   "$BUILD_DIR/MultitouchBridge.o" \
   Sources/MagicTouch/Models/*.swift \

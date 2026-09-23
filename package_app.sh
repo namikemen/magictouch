@@ -47,6 +47,7 @@ swiftc -target arm64-apple-macos13.0 \
   -framework AppKit \
   -framework SwiftUI \
   -framework CoreGraphics \
+  -framework IOKit \
   -I Sources/MultitouchBridge/include \
   "$OBJ_DIR/MultitouchBridge_arm64.o" \
   "${SWIFT_SOURCES[@]}" \
@@ -71,6 +72,7 @@ swiftc -target x86_64-apple-macos13.0 \
   -framework AppKit \
   -framework SwiftUI \
   -framework CoreGraphics \
+  -framework IOKit \
   -I Sources/MultitouchBridge/include \
   "$OBJ_DIR/MultitouchBridge_x86_64.o" \
   "${SWIFT_SOURCES[@]}" \
