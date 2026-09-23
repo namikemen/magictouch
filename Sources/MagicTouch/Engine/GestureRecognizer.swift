@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import os
 
 /// Internal simplified touch point model
 public struct TouchPoint: Identifiable, Equatable {
@@ -33,6 +34,7 @@ public extension GestureRecognizerDelegate {
 /// Gesture recognition state machine
 public final class GestureRecognizer {
     public weak var delegate: GestureRecognizerDelegate?
+    private var lock = os_unfair_lock_s()
 
     // Tracking active touch paths
     private var initialTouches: [Int: TouchPoint] = [:]
@@ -109,6 +111,9 @@ public final class GestureRecognizer {
 
     /// Process a new contact frame from the mouse surface
     public func processFrame(touches: [TouchPoint], timestamp: Double) {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+
         let activeFingers = touches.count
         delegate?.gestureRecognizerDidUpdateTouches(touches: touches)
 
@@ -587,6 +592,9 @@ public final class GestureRecognizer {
 
     /// Process a physical mouse click intercepted via CGEventTap or mouse hook
     public func processPhysicalClick() {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+
         if !currentTouches.isEmpty || !initialTouches.isEmpty {
             hasPhysicalClickedInCurrentSession = true
         }
@@ -607,6 +615,9 @@ public final class GestureRecognizer {
 
     /// Notify that native mouse scrolling occurred
     public func notifyScrollActivity(timestamp: Double = 0) {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+
         lastScrollTime = (timestamp > 0) ? timestamp : ProcessInfo.processInfo.systemUptime
         hasScrolledInCurrentSession = true
     }

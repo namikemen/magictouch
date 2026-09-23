@@ -49,6 +49,7 @@ public final class MultitouchManager: GestureRecognizerDelegate {
 
     public weak var delegate: MultitouchManagerDelegate?
     public let recognizer: GestureRecognizer
+    public let recognizerQueue = DispatchQueue(label: "com.namikemen.magictouch.recognizer", qos: .userInteractive)
     private var isRunning = false
     private var activeDevice: MTDeviceRef?
     private var isExternalDeviceActive = false
@@ -238,7 +239,9 @@ public final class MultitouchManager: GestureRecognizerDelegate {
 
     // MARK: - Frame Dispatch
     fileprivate func handleTouchFrame(touches: [TouchPoint], timestamp: Double) {
-        recognizer.processFrame(touches: touches, timestamp: timestamp)
+        recognizerQueue.async { [weak self] in
+            self?.recognizer.processFrame(touches: touches, timestamp: timestamp)
+        }
     }
 
     // MARK: - Click Event Tap
@@ -268,7 +271,9 @@ public final class MultitouchManager: GestureRecognizerDelegate {
                 }
                 if let refcon = refcon {
                     let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
-                    mgr.recognizer.processPhysicalClick()
+                    mgr.recognizerQueue.async {
+                        mgr.recognizer.processPhysicalClick()
+                    }
                 }
                 return Unmanaged.passRetained(event)
             },
