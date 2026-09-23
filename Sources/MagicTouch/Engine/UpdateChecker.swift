@@ -20,7 +20,7 @@ public final class UpdateChecker: NSObject, ObservableObject, URLSessionDownload
     }
 
     // Published state
-    @Published public var currentVersion: String = "0.1.3"
+    @Published public var currentVersion: String = "0.1.4"
     @Published public var isChecking: Bool = false
     @Published public var isUpdateAvailable: Bool = false
     @Published public var latestVersion: String = ""
