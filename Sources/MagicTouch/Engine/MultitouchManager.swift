@@ -85,23 +85,19 @@ public final class MultitouchManager: GestureRecognizerDelegate {
     // MARK: - Device Scanning
     private struct DeviceScanResult {
         let externalDevice: MTDeviceRef?
-        let builtInDevice: MTDeviceRef?
         let externalCount: Int
-        let totalCount: Int
     }
 
     private func scanDevices() -> DeviceScanResult {
         MTBridgeRefreshDevices()
         let count = MTBridgeGetDeviceCount()
         var extDev: MTDeviceRef?
-        var builtInDev: MTDeviceRef?
         var extCount = 0
 
         for i in 0..<count {
             if let dev = MTBridgeGetDeviceAtIndex(i) {
-                if MTBridgeDeviceIsBuiltIn(dev) {
-                    if builtInDev == nil { builtInDev = dev }
-                } else {
+                // Strictly ignore built-in trackpads/touchpads: MagicTouch only binds to external Magic Mouse
+                if !MTBridgeDeviceIsBuiltIn(dev) {
                     extCount += 1
                     if extDev == nil { extDev = dev }
                 }
@@ -109,9 +105,7 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         }
         return DeviceScanResult(
             externalDevice: extDev,
-            builtInDevice: builtInDev,
-            externalCount: extCount,
-            totalCount: count
+            externalCount: extCount
         )
     }
 
@@ -161,9 +155,8 @@ public final class MultitouchManager: GestureRecognizerDelegate {
     private func startMultitouchDevice() {
         let scan = scanDevices()
         self.lastKnownExternalDeviceCount = scan.externalCount
-        self.lastKnownTotalDeviceCount = scan.totalCount
 
-        print("[MagicTouch] Total multitouch devices found: \(scan.totalCount) (External: \(scan.externalCount))")
+        print("[MagicTouch] External multitouch devices found: \(scan.externalCount)")
         fflush(stdout)
 
         if let ext = scan.externalDevice {
@@ -174,20 +167,12 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             print("[MagicTouch] Successfully bound to: \(devName)")
             fflush(stdout)
             delegate?.multitouchManagerDeviceStatusChanged(connected: true, deviceName: devName)
-        } else if let builtIn = scan.builtInDevice {
-            self.activeDevice = builtIn
-            self.isExternalDeviceActive = false
-            MTBridgeStartDevice(builtIn, multitouchCallback)
-            let devName = "Internal Trackpad"
-            print("[MagicTouch] Bound to fallback: \(devName)")
-            fflush(stdout)
-            delegate?.multitouchManagerDeviceStatusChanged(connected: true, deviceName: devName)
         } else {
             self.activeDevice = nil
             self.isExternalDeviceActive = false
-            print("[MagicTouch] No multitouch device found")
+            print("[MagicTouch] No external Magic Mouse found")
             fflush(stdout)
-            delegate?.multitouchManagerDeviceStatusChanged(connected: false, deviceName: "No Multitouch Device Found")
+            delegate?.multitouchManagerDeviceStatusChanged(connected: false, deviceName: "No Magic Mouse Connected")
         }
     }
 
@@ -228,9 +213,9 @@ public final class MultitouchManager: GestureRecognizerDelegate {
             return
         }
 
-        // 2. If we are currently not bound to any device, but devices exist, bind!
-        if activeDevice == nil && scan.totalCount > 0 {
-            print("[MagicTouch] Multitouch device available. Binding...")
+        // 2. If we are currently not bound to any device, but an external device is available, bind!
+        if activeDevice == nil && scan.externalCount > 0 {
+            print("[MagicTouch] Magic Mouse available. Binding...")
             fflush(stdout)
             startMultitouchDevice()
             return
@@ -239,14 +224,22 @@ public final class MultitouchManager: GestureRecognizerDelegate {
 
     // MARK: - Frame Dispatch
     fileprivate func handleTouchFrame(touches: [TouchPoint], timestamp: Double) {
+        // Send all raw touches for visualizer display
+        DispatchQueue.main.async { [weak self] in
+            self?.delegate?.multitouchManagerDidUpdateTouches(touches: touches)
+        }
+
+        let minY = Float(ConfigurationStore.shared.touchAreaMinY)
+        let activeTouches = (minY > 0.0) ? touches.filter { $0.y >= minY } : touches
+
         recognizerQueue.async { [weak self] in
-            self?.recognizer.processFrame(touches: touches, timestamp: timestamp)
+            self?.recognizer.processFrame(touches: activeTouches, timestamp: timestamp)
         }
     }
 
-    // MARK: - Click Event Tap
+    // MARK: - Click & Scroll Event Tap
     private func startClickInterceptor() {
-        let mask = (1 << CGEventType.leftMouseDown.rawValue)
+        let mask = (1 << CGEventType.leftMouseDown.rawValue) | (1 << CGEventType.scrollWheel.rawValue)
         guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
@@ -262,6 +255,19 @@ public final class MultitouchManager: GestureRecognizerDelegate {
                     return Unmanaged.passRetained(event)
                 }
 
+                // If native scrolling occurs on the Magic Mouse, notify recognizer to suppress false taps on release
+                if type == .scrollWheel {
+                    if let refcon = refcon {
+                        let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
+                        if mgr.isExternalDeviceActive {
+                            mgr.recognizerQueue.async {
+                                mgr.recognizer.notifyScrollActivity()
+                            }
+                        }
+                    }
+                    return Unmanaged.passRetained(event)
+                }
+
                 // Filter out MagicTouch's own synthesized clicks
                 if event.getIntegerValueField(.eventSourceUserData) == ActionDispatcher.magicEventSignature {
                     return Unmanaged.passRetained(event)
@@ -271,6 +277,10 @@ public final class MultitouchManager: GestureRecognizerDelegate {
                 }
                 if let refcon = refcon {
                     let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
+                    // Never intercept clicks when Magic Mouse is not the active device
+                    guard mgr.isExternalDeviceActive else {
+                        return Unmanaged.passRetained(event)
+                    }
                     mgr.recognizerQueue.async {
                         mgr.recognizer.processPhysicalClick()
                     }

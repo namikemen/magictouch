@@ -55,11 +55,32 @@ public struct MainPopoverView: View {
 
             // Main Content Area (Visualizer + Mappings)
             HStack(alignment: .top, spacing: 16) {
-                // Left Column: Live Visualizer (Relative sizing)
-                VStack(spacing: 10) {
-                    TouchVisualizerView(touches: appState.touches)
-                        .frame(maxWidth: 130, maxHeight: 210)
+                // Left Column: Live Visualizer & Area Settings
+                VStack(spacing: 8) {
+                    TouchVisualizerView(touches: appState.touches, touchAreaMinY: configStore.touchAreaMinY)
+                        .frame(maxWidth: 130, maxHeight: 185)
                         .padding(.top, 4)
+
+                    // Touch Area Selector
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text("Touch Area")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(configStore.touchAreaMinY == 0.0 ? "Full" : (configStore.touchAreaMinY >= 0.50 ? "Top 50%" : "Top 70%"))
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.accentColor)
+                        }
+                        Picker("", selection: $configStore.touchAreaMinY) {
+                            Text("Full").tag(0.0)
+                            Text("Top 70%").tag(0.30)
+                            Text("Top 50%").tag(0.50)
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.mini)
+                    }
+                    .padding(.horizontal, 4)
 
                     if !appState.lastGesture.isEmpty {
                         VStack(spacing: 2) {

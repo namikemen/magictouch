@@ -12,6 +12,11 @@ public final class ConfigurationStore: ObservableObject {
             UserDefaults.standard.set(isEnabled, forKey: "MagicTouch_IsEnabled")
         }
     }
+    @Published public var touchAreaMinY: Double {
+        didSet {
+            UserDefaults.standard.set(touchAreaMinY, forKey: "MagicTouch_TouchAreaMinY")
+        }
+    }
 
     private let saveURL: URL
 
@@ -19,6 +24,7 @@ public final class ConfigurationStore: ObservableObject {
         if let customURL = saveURL {
             self.saveURL = customURL
             self.isEnabled = true
+            self.touchAreaMinY = 0.0
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             let appDir = appSupport.appendingPathComponent("MagicTouch", isDirectory: true)
@@ -26,9 +32,14 @@ public final class ConfigurationStore: ObservableObject {
             try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
             self.saveURL = appDir.appendingPathComponent("gestures.json")
             self.isEnabled = UserDefaults.standard.object(forKey: "MagicTouch_IsEnabled") as? Bool ?? true
+            self.touchAreaMinY = UserDefaults.standard.object(forKey: "MagicTouch_TouchAreaMinY") as? Double ?? 0.0
         }
 
         load()
+    }
+
+    public func setTouchAreaMinY(_ minY: Double) {
+        self.touchAreaMinY = min(max(minY, 0.0), 0.70)
     }
 
     public func load() {

@@ -34,6 +34,7 @@ public extension GestureRecognizerDelegate {
 /// Gesture recognition state machine
 public final class GestureRecognizer {
     public weak var delegate: GestureRecognizerDelegate?
+    public var minTouchY: Float = 0.0
     private var lock = os_unfair_lock_s()
 
     // Tracking active touch paths
@@ -114,12 +115,13 @@ public final class GestureRecognizer {
         os_unfair_lock_lock(&lock)
         defer { os_unfair_lock_unlock(&lock) }
 
-        let activeFingers = touches.count
+        let validTouches = (minTouchY > 0.0) ? touches.filter { $0.y >= minTouchY } : touches
+        let activeFingers = validTouches.count
         delegate?.gestureRecognizerDidUpdateTouches(touches: touches)
 
         // Check if there was a pending tip-tap from near-simultaneous touchdown
         if let pending = pendingTipTap {
-            if activeFingers == 1 && touches.first?.id == pending.restingId {
+            if activeFingers == 1 && validTouches.first?.id == pending.restingId {
                 if timestamp - pending.detectedTime >= 0.10 {
                     // Resting finger stayed down: confirmed Tip-Tap!
                     delegate?.gestureRecognizerDidDetect(gesture: pending.gesture)
@@ -139,7 +141,7 @@ public final class GestureRecognizer {
 
         if activeFingers > 0 {
             // Keep persistent record of the most recent coordinate of every touch in this session
-            for t in touches {
+            for t in validTouches {
                 lastKnownTouches[t.id] = t
             }
 
@@ -148,7 +150,7 @@ public final class GestureRecognizer {
                 touchStartTime = timestamp
                 maxSimultaneousFingers = activeFingers
                 hasPhysicalClickedInCurrentSession = false
-                for t in touches {
+                for t in validTouches {
                     initialTouches[t.id] = t
                     touchDownTimes[t.id] = timestamp
                 }
@@ -167,7 +169,7 @@ public final class GestureRecognizer {
                 if activeFingers != 1 {
                     isPotentialDragHold = false
                 }
-                for t in touches {
+                for t in validTouches {
                     if initialTouches[t.id] == nil {
                         initialTouches[t.id] = t
                         touchDownTimes[t.id] = timestamp
@@ -177,7 +179,7 @@ public final class GestureRecognizer {
                 // If a second finger just landed, snapshot resting finger position
                 let previousIds = Set(currentTouches.keys)
                 if activeFingers == 2 && previousIds.count == 1 {
-                    for t in touches {
+                    for t in validTouches {
                         touchPositionsAtTapDown[t.id] = t
                     }
                 }
@@ -185,7 +187,7 @@ public final class GestureRecognizer {
 
             // Track spread changes across 2 or 3 active fingers
             if activeFingers >= 2 {
-                let spread = calculateSpread(touches: touches)
+                let spread = calculateSpread(touches: validTouches)
                 if initialSpread == nil {
                     initialSpread = spread
                 }
@@ -197,14 +199,14 @@ public final class GestureRecognizer {
             }
 
             // Check for Tip-Tap: 2 fingers were touching, now 1 finger lifted while other remains resting
-            let activeIds = Set(touches.map { $0.id })
+            let activeIds = Set(validTouches.map { $0.id })
             let previousIds = Set(currentTouches.keys)
             let liftedIds = previousIds.subtracting(activeIds)
 
             if maxSimultaneousFingers == 2 && activeFingers == 1 && liftedIds.count == 1 && !hasTriggeredPinch {
                 if let liftedId = liftedIds.first,
                    let liftedInitial = initialTouches[liftedId],
-                   let restingTouch = touches.first,
+                   let restingTouch = validTouches.first,
                    let restingInitial = initialTouches[restingTouch.id] {
                     
                     let liftedStartTime = touchDownTimes[liftedId] ?? touchStartTime
@@ -250,17 +252,26 @@ public final class GestureRecognizer {
             }
 
             currentTouches.removeAll()
-            for t in touches {
+            for t in validTouches {
                 currentTouches[t.id] = t
                 if let initial = initialTouches[t.id] {
                     let exc = hypot(t.x - initial.x, t.y - initial.y)
                     if exc > (maxExcursionFromStart[t.id] ?? 0) {
                         maxExcursionFromStart[t.id] = exc
                     }
+                    let dy = abs(t.y - initial.y)
+                    let dx = abs(t.x - initial.x)
+                    // If single finger moves vertically along scroll axis by > 0.035, mark as scrolling
+                    if activeFingers == 1 && dy > 0.035 && dy > dx {
+                        hasScrolledInCurrentSession = true
+                    }
                 }
                 if let prev = previousPositions[t.id] {
                     let step = hypot(t.x - prev.x, t.y - prev.y)
                     totalPathDistance[t.id] = (totalPathDistance[t.id] ?? 0) + step
+                    if activeFingers == 1 && (totalPathDistance[t.id] ?? 0) > 0.045 {
+                        hasScrolledInCurrentSession = true
+                    }
                 }
                 previousPositions[t.id] = t
             }
@@ -472,20 +483,25 @@ public final class GestureRecognizer {
 
         // 2. Check for Taps
         let isTap: Bool
-        if fingerCount == 1 {
+        let timeSinceNativeScroll = timestamp - lastScrollTime
+        let wasRecentlyScrolling = hasScrolledInCurrentSession || (lastScrollTime > 0 && timeSinceNativeScroll < 0.30)
+
+        if wasRecentlyScrolling {
+            isTap = false
+        } else if fingerCount == 1 {
             let maxExcursion = initialTouches.keys.compactMap { maxExcursionFromStart[$0] }.max() ?? distance
             let totalPath = initialTouches.keys.compactMap { totalPathDistance[$0] }.max() ?? distance
 
             isTap = duration >= oneFingerTapMinDuration &&
-                    duration <= 0.35 &&
-                    distance < 0.070 &&
-                    maxExcursion < 0.070 &&
-                    totalPath < 0.090
+                    duration <= 0.28 &&
+                    distance < 0.035 &&
+                    maxExcursion < 0.038 &&
+                    totalPath < 0.048
         } else {
-            // Multi-finger tap: 35ms - 350ms and movement < 0.10
+            // Multi-finger tap: 35ms - 350ms and movement < 0.08
             isTap = duration >= multiFingerTapMinDuration &&
                     duration <= multiFingerTapMaxDuration &&
-                    distance < multiFingerTapMaxMovement
+                    distance < 0.08
         }
 
         if isTap {

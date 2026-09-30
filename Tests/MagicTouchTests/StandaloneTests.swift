@@ -520,6 +520,43 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         try? FileManager.default.removeItem(at: tempURL)
     }
 
+    func testTouchableAreaFiltering() {
+        print("Running: Touchable Area Filtering (Ignoring Lower Half)...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // Configure recognizer to ignore lower half (minTouchY = 0.50)
+        recognizer.minTouchY = 0.50
+
+        // 1. Touch in the lower half (y = 0.30)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.30)], timestamp: 95.0)
+        recognizer.processFrame(touches: [], timestamp: 95.08)
+        assertEqual(lastDetectedGesture, nil, "Touch in lower half (y=0.30) is ignored when minTouchY=0.50")
+        assertEqual(detectedGestures.count, 0, "No gesture triggered in ignored lower zone")
+
+        // 2. Touch in the upper half (y = 0.70)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.25, y: 0.70)], timestamp: 96.0)
+        recognizer.processFrame(touches: [], timestamp: 96.08)
+        assertEqual(lastDetectedGesture, .oneFingerTapLeft, "Touch in upper half (y=0.70) is recognized as tap")
+        assertEqual(detectedGestures.count, 1, "Exactly 1 gesture detected for valid upper half touch")
+    }
+
+    func testConfigurationStoreTouchAreaMinY() {
+        print("Running: Configuration Store Touch Area MinY...")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        let store = ConfigurationStore(saveURL: tempURL)
+        assertEqual(store.touchAreaMinY, 0.0, "Touch area defaults to 0.0 (Full surface)")
+        store.setTouchAreaMinY(0.50)
+        assertEqual(store.touchAreaMinY, 0.50, "Touch area can be set to 0.50 (Top half only)")
+        store.setTouchAreaMinY(1.20)
+        assertEqual(store.touchAreaMinY, 0.70, "Touch area is clamped to max 0.70")
+        store.setTouchAreaMinY(-0.50)
+        assertEqual(store.touchAreaMinY, 0.0, "Touch area is clamped to min 0.0")
+        try? FileManager.default.removeItem(at: tempURL)
+    }
+
     func testSemVerComparison() {
         print("Running: Semantic Version (SemVer) Comparison...")
         let v1_0_0 = SemVer("1.0.0")
@@ -661,6 +698,41 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(detectedGestures.count, 0, "No false tap detected from scroll")
     }
 
+    func testSmallScrollFlickDoesNotTriggerTap() {
+        print("Running: Small 1-Finger Scroll Flick does NOT trigger tap...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // User does a small scroll flick: travels y = 0.60 down to y = 0.55 (delta y = 0.05)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.60)], timestamp: 75.0)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.57)], timestamp: 75.06)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.55)], timestamp: 75.12)
+        recognizer.processFrame(touches: [], timestamp: 75.14)
+
+        assertEqual(lastDetectedGesture, nil, "Small 1-finger scroll flick does NOT trigger tap")
+        assertEqual(detectedGestures.count, 0, "No tap dispatched from small scroll flick")
+    }
+
+    func testNativeScrollNotificationSuppressesTap() {
+        print("Running: Native Scroll Notification Suppresses Tap...")
+        let recognizer = GestureRecognizer()
+        recognizer.delegate = self
+        lastDetectedGesture = nil
+        detectedGestures.removeAll()
+
+        // Finger is on surface during scroll
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.60)], timestamp: 76.0)
+        // Native scroll event received
+        recognizer.notifyScrollActivity(timestamp: 76.05)
+        // Finger lifts
+        recognizer.processFrame(touches: [], timestamp: 76.10)
+
+        assertEqual(lastDetectedGesture, nil, "Touch release after native scroll does NOT trigger tap")
+        assertEqual(detectedGestures.count, 0, "No tap dispatched after native scroll")
+    }
+
     func testOneFingerDoubleTapDetection() {
         print("Running: 1-Finger Double Tap Detection...")
         let recognizer = GestureRecognizer()
@@ -716,6 +788,8 @@ struct RunnerApp {
         runner.testPhysicalClickSuppressesTapOnRelease()
         runner.testThreeFingerTapBounceDebounce()
         runner.testScrollDoesNotTriggerTap()
+        runner.testSmallScrollFlickDoesNotTriggerTap()
+        runner.testNativeScrollNotificationSuppressesTap()
         runner.testOneFingerDoubleTapDetection()
         runner.testPhysicalClickOutsideTouchesDoesNotSuppressSubsequentTap()
         runner.testTwoFingerSwipeRightDetection()
@@ -735,6 +809,8 @@ struct RunnerApp {
         runner.testTwoFingerTapNotTipTap()
         runner.testMouseButtonMappings()
         runner.testConfigurationStorePersistence()
-        print("🎉 All 31 MagicTouch test suites passed successfully!")
+        runner.testTouchableAreaFiltering()
+        runner.testConfigurationStoreTouchAreaMinY()
+        print("🎉 All 35 MagicTouch test suites passed successfully!")
     }
 }
