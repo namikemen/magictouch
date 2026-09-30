@@ -14,7 +14,7 @@ MagicTouch is a native macOS menu bar utility for the Apple Magic Mouse. It inte
 ### Testing
 - **Run All Tests (Standalone)**: `./run_tests.sh`
   - Uses `Tests/MagicTouchTests/StandaloneTests.swift` compiled directly via `swiftc`.
-  - Runs 31 test suites in ~1-2 seconds without requiring full Xcode.app or `XCTest` (ideal for Command Line Tools environments and headless CI).
+  - Runs 36 test suites in ~1-2 seconds without requiring full Xcode.app or `XCTest` (ideal for Command Line Tools environments and headless CI).
 - **Run a Single Test**:
   - *Standalone runner*: Isolate the desired test by commenting/uncommenting the target runner call in `RunnerApp.main()` within `Tests/MagicTouchTests/StandaloneTests.swift`, then run `./run_tests.sh`.
   - *SwiftPM / XCTest runner*: `swift test --filter GestureRecognizerTests/<testMethodName>` (e.g. `swift test --filter GestureRecognizerTests/testThreeFingerTapDetection`). Requires full Xcode.app selected via `xcode-select -s /Applications/Xcode.app` since Apple's Command Line Tools SDK does not include `XCTest.framework`.
@@ -42,15 +42,16 @@ The application operates as an event-driven pipeline from private C kernel callb
        │  • MTRegisterContactFrameCallback, MTBridgeStartDevice
        ▼
 [MultitouchManager (Swift)] (Sources/MagicTouch/Engine/MultitouchManager.swift)
-       │  • Normalizes raw MTTouch into TouchPoint (x, y ∈ [0.0...1.0])
-       │  • Prioritizes external Magic Mouse over built-in trackpad
+       │  • Filters out hover/proximity states via MTBridgeIsPhysicalContact
+       │  • Restricts binding strictly to external Magic Mouse (!MTBridgeDeviceIsBuiltIn)
+       │  • Filters touch points against configurable touchAreaMinY threshold
        │  • Watchdog timer (2s) auto-recovers disconnects/sleep
        │  • CGEvent.tapCreate on .cghidEventTap intercepts physical left clicks
        ▼
 [GestureRecognizer] (Sources/MagicTouch/Engine/GestureRecognizer.swift)
        │  • State machine running on dedicated recognizerQueue (qos: .userInteractive)
        │  • Distinguishes 1-4 finger taps, double/triple taps, directional swipes, pinches, tip-taps, hold-to-drag
-       │  • Applies scroll excursion suppression and resting finger filters
+       │  • Applies directional ratio scroll suppression and resting finger filters
        ▼
 [AppDelegate & ConfigurationStore] (Sources/MagicTouch/main.swift, Store/ConfigurationStore.swift)
        │  • Resolves GestureType to ActionTarget from ~/Library/Application Support/MagicTouch/gestures.json
@@ -88,9 +89,12 @@ The application operates as an event-driven pipeline from private C kernel callb
 - `ActionDispatcher` marks all synthetic mouse events with `.eventSourceUserData = ActionDispatcher.magicEventSignature` (`0x4D41474943`, `"MAGIC"`) and sets `ActionDispatcher.isSynthesizingEvent = true`.
 - `MultitouchManager`'s physical click interceptor (`CGEventTap`) checks both conditions and ignores matched events, preventing recursive click loops.
 
-### Physical Magic Mouse Surface Dynamics
-- The Magic Mouse has a narrow, curved glass surface where users frequently rest fingers or recoil during scrolling.
-- **Scroll Excursion Filter**: `GestureRecognizer` tracks `maxExcursionFromStart`. Fingers moving > 0.08 normalized distance during a scroll flick are suppressed from triggering taps upon lift.
+### Physical Magic Mouse Surface Dynamics & Filtering
+- The Magic Mouse has a narrow, curved glass surface where users frequently rest palms, recoil during scrolling, or hover fingers above the glass.
+- **Physical Contact vs Hover**: `MTBridgeIsPhysicalContact` only accepts physical touchdown states (`MakeTouch=3`, `Touching=4`, `BreakTouch=5`). Proximity/hover states (`StartInRange=1`, `HoverInRange=2`, `LingerInRange=6`) are rejected to avoid phantom touches.
+- **Scroll vs Tap Differentiation**: Circular excursion thresholds alone fail to distinguish small vertical scrolls from taps. The recognizer compares vertical displacement against lateral spread (`abs(avgDy) > 0.032 && abs(avgDy) > abs(avgDx) * 1.25`) to accurately reject scroll flicks without compromising tap responsiveness.
+- **Configurable Touchable Area**: `touchAreaMinY` filters out touches on the lower/palm area of the mouse (normalized Y runs from 0.0 at the palm rest to 1.0 at the front edge).
+- **Trackpad Isolation**: `MTBridgeDeviceIsBuiltIn(dev)` is used to strictly reject built-in Mac trackpads; MagicTouch only operates on external Magic Mice.
 - **Resting Finger Suppression**: Touch contacts persisting > 450ms are marked as resting; their subsequent lift will not trigger accidental taps.
 - **Natural Finger Compression**: During horizontal multi-finger swipes, fingers naturally converge on the curved surface. The recognizer accounts for this so swipes are not misclassified as pinch-in gestures.
 - Always run `./run_tests.sh` to verify these boundary conditions before adjusting timing or distance thresholds.

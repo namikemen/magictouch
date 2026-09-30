@@ -65,6 +65,7 @@ int MTDeviceGetFamilyID(MTDeviceRef device);
 CFIndex MTBridgeGetDeviceCount(void);
 MTDeviceRef MTBridgeGetDeviceAtIndex(CFIndex index);
 bool MTBridgeDeviceIsBuiltIn(MTDeviceRef device);
+bool MTBridgeIsPhysicalContact(MTTouchState state);
 void MTBridgeStartDevice(MTDeviceRef device, MTContactCallbackFunction callback);
 void MTBridgeStopDevice(MTDeviceRef device, MTContactCallbackFunction callback);
 void MTBridgeRefreshDevices(void);

@@ -34,6 +34,12 @@ bool MTBridgeDeviceIsBuiltIn(MTDeviceRef device) {
     return MTDeviceIsBuiltIn(device);
 }
 
+bool MTBridgeIsPhysicalContact(MTTouchState state) {
+    return state == MTTouchStateMakeTouch ||
+           state == MTTouchStateTouching ||
+           state == MTTouchStateBreakTouch;
+}
+
 void MTBridgeStartDevice(MTDeviceRef device, MTContactCallbackFunction callback) {
     if (!device || !callback) return;
     CFRetain(device);

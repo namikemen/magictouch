@@ -1,4 +1,5 @@
 import Foundation
+import MultitouchBridge
 
 final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
     private var lastDetectedGesture: GestureType?
@@ -769,6 +770,21 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(lastDetectedGesture, .oneFingerTapLeft, "Tap after external click is NOT suppressed")
         assertEqual(detectedGestures.count, 1, "Exactly 1 gesture detected for the tap")
     }
+
+    func testTouchStatePhysicalContactFiltering() {
+        print("Running: Touch State Physical Contact Filtering (Rejecting Hover/Proximity)...")
+        // Physical contact states MUST return true
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateMakeTouch), true, "MTTouchStateMakeTouch is physical contact")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateTouching), true, "MTTouchStateTouching is physical contact")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateBreakTouch), true, "MTTouchStateBreakTouch is physical contact")
+
+        // Hover, proximity, lingering, out-of-range and not-tracking states MUST return false
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateNotTracking), false, "MTTouchStateNotTracking is rejected")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateStartInRange), false, "MTTouchStateStartInRange is rejected")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateHoverInRange), false, "MTTouchStateHoverInRange (hover above mouse) is rejected")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateLingerInRange), false, "MTTouchStateLingerInRange (hover after lift) is rejected")
+        assertEqual(MTBridgeIsPhysicalContact(MTTouchStateOutOfRange), false, "MTTouchStateOutOfRange is rejected")
+    }
 }
 
 @main
@@ -810,6 +826,7 @@ struct RunnerApp {
         runner.testConfigurationStorePersistence()
         runner.testTouchableAreaFiltering()
         runner.testConfigurationStoreTouchAreaMinY()
-        print("🎉 All 35 MagicTouch test suites passed successfully!")
+        runner.testTouchStatePhysicalContactFiltering()
+        print("🎉 All 36 MagicTouch test suites passed successfully!")
     }
 }

@@ -13,9 +13,10 @@ private func multitouchCallback(device: MTDeviceRef?, touches: UnsafeMutablePoin
 
     for i in 0..<Int(numTouches) {
         let touch = touches[i]
-        // Magic Mouse reports touches across states (MakeTouch=3, Touching=4, HoverInRange=2, BreakTouch=5)
-        // Accept all non-zero states except OutOfRange (7) and NotTracking (0)
-        if touch.state != MTTouchStateNotTracking && touch.state != MTTouchStateOutOfRange {
+        // Only accept physical contact states (MakeTouch=3, Touching=4, BreakTouch=5).
+        // Hover/proximity states (StartInRange=1, HoverInRange=2, LingerInRange=6, OutOfRange=7, NotTracking=0)
+        // are rejected so that fingers hovering in mid-air above the mouse do not trigger false touches.
+        if MTBridgeIsPhysicalContact(touch.state) {
             let point = TouchPoint(
                 id: Int(touch.identifier),
                 x: touch.normalizedPosition.position.x,
