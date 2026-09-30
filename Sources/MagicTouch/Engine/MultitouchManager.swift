@@ -237,9 +237,9 @@ public final class MultitouchManager: GestureRecognizerDelegate {
         }
     }
 
-    // MARK: - Click & Scroll Event Tap
+    // MARK: - Click Event Tap
     private func startClickInterceptor() {
-        let mask = (1 << CGEventType.leftMouseDown.rawValue) | (1 << CGEventType.scrollWheel.rawValue)
+        let mask = (1 << CGEventType.leftMouseDown.rawValue)
         guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
@@ -251,19 +251,6 @@ public final class MultitouchManager: GestureRecognizerDelegate {
                     if let refcon = refcon {
                         let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
                         mgr.reEnableClickInterceptor()
-                    }
-                    return Unmanaged.passRetained(event)
-                }
-
-                // If native scrolling occurs on the Magic Mouse, notify recognizer to suppress false taps on release
-                if type == .scrollWheel {
-                    if let refcon = refcon {
-                        let mgr = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
-                        if mgr.isExternalDeviceActive {
-                            mgr.recognizerQueue.async {
-                                mgr.recognizer.notifyScrollActivity()
-                            }
-                        }
                     }
                     return Unmanaged.passRetained(event)
                 }

@@ -715,22 +715,21 @@ final class GestureRecognizerTestsRunner: GestureRecognizerDelegate {
         assertEqual(detectedGestures.count, 0, "No tap dispatched from small scroll flick")
     }
 
-    func testNativeScrollNotificationSuppressesTap() {
-        print("Running: Native Scroll Notification Suppresses Tap...")
+    func testVerticalScrollUpDoesNotTriggerTap() {
+        print("Running: Vertical Scroll Up does NOT trigger tap...")
         let recognizer = GestureRecognizer()
         recognizer.delegate = self
         lastDetectedGesture = nil
         detectedGestures.removeAll()
 
-        // Finger is on surface during scroll
-        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.30, y: 0.60)], timestamp: 76.0)
-        // Native scroll event received
-        recognizer.notifyScrollActivity(timestamp: 76.05)
-        // Finger lifts
-        recognizer.processFrame(touches: [], timestamp: 76.10)
+        // Finger starts at y = 0.50, moves up to y = 0.56 (scrolling up)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.50)], timestamp: 76.0)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.53)], timestamp: 76.06)
+        recognizer.processFrame(touches: [TouchPoint(id: 1, x: 0.35, y: 0.56)], timestamp: 76.12)
+        recognizer.processFrame(touches: [], timestamp: 76.14)
 
-        assertEqual(lastDetectedGesture, nil, "Touch release after native scroll does NOT trigger tap")
-        assertEqual(detectedGestures.count, 0, "No tap dispatched after native scroll")
+        assertEqual(lastDetectedGesture, nil, "Vertical scroll up motion does NOT trigger tap")
+        assertEqual(detectedGestures.count, 0, "No tap dispatched from scroll up")
     }
 
     func testOneFingerDoubleTapDetection() {
@@ -789,7 +788,7 @@ struct RunnerApp {
         runner.testThreeFingerTapBounceDebounce()
         runner.testScrollDoesNotTriggerTap()
         runner.testSmallScrollFlickDoesNotTriggerTap()
-        runner.testNativeScrollNotificationSuppressesTap()
+        runner.testVerticalScrollUpDoesNotTriggerTap()
         runner.testOneFingerDoubleTapDetection()
         runner.testPhysicalClickOutsideTouchesDoesNotSuppressSubsequentTap()
         runner.testTwoFingerSwipeRightDetection()

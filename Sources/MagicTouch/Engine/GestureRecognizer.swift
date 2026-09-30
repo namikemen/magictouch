@@ -259,19 +259,10 @@ public final class GestureRecognizer {
                     if exc > (maxExcursionFromStart[t.id] ?? 0) {
                         maxExcursionFromStart[t.id] = exc
                     }
-                    let dy = abs(t.y - initial.y)
-                    let dx = abs(t.x - initial.x)
-                    // If single finger moves vertically along scroll axis by > 0.035, mark as scrolling
-                    if activeFingers == 1 && dy > 0.035 && dy > dx {
-                        hasScrolledInCurrentSession = true
-                    }
                 }
                 if let prev = previousPositions[t.id] {
                     let step = hypot(t.x - prev.x, t.y - prev.y)
                     totalPathDistance[t.id] = (totalPathDistance[t.id] ?? 0) + step
-                    if activeFingers == 1 && (totalPathDistance[t.id] ?? 0) > 0.045 {
-                        hasScrolledInCurrentSession = true
-                    }
                 }
                 previousPositions[t.id] = t
             }
@@ -483,25 +474,25 @@ public final class GestureRecognizer {
 
         // 2. Check for Taps
         let isTap: Bool
-        let timeSinceNativeScroll = timestamp - lastScrollTime
-        let wasRecentlyScrolling = hasScrolledInCurrentSession || (lastScrollTime > 0 && timeSinceNativeScroll < 0.30)
-
-        if wasRecentlyScrolling {
-            isTap = false
-        } else if fingerCount == 1 {
+        if fingerCount == 1 {
             let maxExcursion = initialTouches.keys.compactMap { maxExcursionFromStart[$0] }.max() ?? distance
             let totalPath = initialTouches.keys.compactMap { totalPathDistance[$0] }.max() ?? distance
 
-            isTap = duration >= oneFingerTapMinDuration &&
-                    duration <= 0.28 &&
-                    distance < 0.035 &&
-                    maxExcursion < 0.038 &&
-                    totalPath < 0.048
+            // Distinguish 1-finger vertical scroll stroke from a tap:
+            // A scroll flick or slide travels predominantly along the vertical Y axis.
+            let isVerticalScrollStroke = abs(avgDy) > 0.032 && abs(avgDy) > (abs(avgDx) * 1.25)
+            let hasExcessiveScrollExcursion = maxExcursion > 0.065 || totalPath > 0.080
+
+            isTap = !isVerticalScrollStroke &&
+                    !hasExcessiveScrollExcursion &&
+                    duration >= oneFingerTapMinDuration &&
+                    duration <= oneFingerTapMaxDuration &&
+                    distance < oneFingerTapMaxMovement
         } else {
-            // Multi-finger tap: 35ms - 350ms and movement < 0.08
+            // Multi-finger tap: 35ms - 350ms and movement < 0.10
             isTap = duration >= multiFingerTapMinDuration &&
                     duration <= multiFingerTapMaxDuration &&
-                    distance < 0.08
+                    distance < multiFingerTapMaxMovement
         }
 
         if isTap {
