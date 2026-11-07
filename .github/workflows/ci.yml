@@ -11,7 +11,7 @@ on:
 jobs:
   test-and-verify:
     name: Run Tests & Verify Universal Build
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Code
