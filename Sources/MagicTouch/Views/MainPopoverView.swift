@@ -7,6 +7,8 @@ public struct MainPopoverView: View {
     @ObservedObject var permissionManager: PermissionManager = PermissionManager.shared
     @ObservedObject var updateChecker: UpdateChecker = UpdateChecker.shared
 
+    @StateObject private var hotkeyUI = ToggleHotkeyUIModel()
+
     public init() {}
 
     public var body: some View {
@@ -176,6 +178,48 @@ public struct MainPopoverView: View {
             .padding(14)
             .background(Color(nsColor: .underPageBackgroundColor).opacity(0.35))
 
+            // Global Toggle Shortcut Row
+            HStack(spacing: 8) {
+                Image(systemName: "keyboard")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+
+                Text("Toggle MagicTouch")
+                    .font(.system(size: 11, weight: .medium))
+
+                Text("Works system-wide")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary.opacity(0.8))
+
+                Spacer()
+
+                Button(action: { hotkeyUI.showsSheet = true }) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text(configStore.toggleHotkeyDisplay)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(configStore.hasToggleHotkey ? .primary : .secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+                    .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help("Click to change the shortcut")
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 5)
+            .sheet(isPresented: $hotkeyUI.showsSheet) {
+                ToggleHotkeySheetView(configStore: configStore)
+            }
+
             Divider()
 
             // Footer Bar
@@ -228,5 +272,117 @@ public struct MainPopoverView: View {
                 configStore.addMapping(newMapping)
             }
         }
+    }
+}
+
+/// View model for embedding/popover-level UI flags that would otherwise use @State.
+private final class ToggleHotkeyUIModel: ObservableObject {
+    @Published var showsSheet = false
+}
+
+/// Draft values for the shortcut editor, initialized from the store when the
+/// sheet is presented; every change is applied to the store immediately.
+private final class ToggleHotkeyDraft: ObservableObject {
+    @Published var modifiers: [KeyModifier]
+    @Published var keyCode: UInt16
+    @Published var description: String
+
+    init(configStore: ConfigurationStore) {
+        modifiers = configStore.toggleHotkeyModifiers
+        keyCode = configStore.toggleHotkeyKeyCode
+        description = configStore.toggleHotkeyDescription
+    }
+}
+
+/// Small sheet for recording the global toggle-on/off shortcut.
+private struct ToggleHotkeySheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var configStore: ConfigurationStore
+
+    @StateObject private var draft: ToggleHotkeyDraft
+
+    init(configStore: ConfigurationStore) {
+        self.configStore = configStore
+        _draft = StateObject(wrappedValue: ToggleHotkeyDraft(configStore: configStore))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Toggle Shortcut")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Turns MagicTouch on or off from any app.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider()
+
+            HotkeyRecorderView(
+                modifiers: $draft.modifiers,
+                keyCode: $draft.keyCode,
+                description: $draft.description
+            )
+
+            Text("Press a key combination while recording. Click the ✕ to disable the shortcut.")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Divider()
+
+            HStack {
+                Button("Clear Shortcut") {
+                    draft.modifiers = []
+                    draft.keyCode = 0
+                    draft.description = ""
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!configStore.hasToggleHotkey)
+
+                Button("Restore Default") {
+                    draft.modifiers = ConfigurationStore.defaultToggleHotkeyModifiers
+                    draft.keyCode = ConfigurationStore.defaultToggleHotkeyKeyCode
+                    draft.description = ConfigurationStore.defaultToggleHotkeyDescription
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer()
+
+                Button("Done") {
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding(16)
+        .frame(minWidth: 380)
+        .onChange(of: draft.modifiers) { _ in apply() }
+        .onChange(of: draft.keyCode) { _ in apply() }
+        .onChange(of: draft.description) { _ in apply() }
+        .onDisappear { apply() }
+    }
+
+    private func apply() {
+        configStore.setToggleHotkey(
+            modifiers: draft.modifiers,
+            keyCode: draft.keyCode,
+            description: draft.description
+        )
     }
 }

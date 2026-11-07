@@ -72,7 +72,8 @@ Any gesture can be mapped to any of the following actions:
 ### 🎨 Visualizer & UI
 
 - **Live Touch Visualizer**: A responsive SVG-based surface that maps real-time touch contact positions, contact radii, and timestamps directly inside the popover.
-- **Menu Bar Utility**: Runs quietly in the status bar (`NSStatusItem`) with a custom mouse glyph.
+- **Global Toggle Shortcut**: Press `⌃ + ⌥ + M` from any app to enable or disable gesture handling instantly (customizable in the popover).
+- **Menu Bar Utility**: Runs quietly in the status bar (`NSStatusItem`) with a custom mouse glyph that dims while gestures are disabled.
 - **Dynamic Configuration Store**: Saves user mappings to `~/Library/Application Support/MagicTouch/gestures.json` with live reload.
 
 ---
@@ -93,6 +94,7 @@ MagicTouch/
 │       │   ├── MultitouchManager.swift # Device lifecycle & frame listener
 │       │   ├── GestureRecognizer.swift # State machine (Taps, Swipes, Pinches, Tip-Taps)
 │       │   ├── ActionDispatcher.swift  # CGEvent synthesis, AppleScript, Shell
+│       │   ├── GlobalHotkeyManager.swift # Carbon global on/off shortcut
 │       │   └── PermissionManager.swift # Accessibility & Input Monitoring check
 │       ├── Store/
 │       │   ├── AppState.swift          # Live reactive state for visualizer

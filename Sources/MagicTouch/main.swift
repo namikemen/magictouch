@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 @main
 struct MagicTouchApp: App {
@@ -23,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
     private var lastDispatchedGesture: GestureType?
     private var lastDispatchedTime: Double = 0
     private var lastSingleTapGesture: GestureType = .oneFingerTapLeft
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // Menu bar only app (no dock icon)
@@ -48,6 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
         multitouchManager.delegate = self
         multitouchManager.start()
 
+        // System-wide hotkey that toggles the master enable switch
+        GlobalHotkeyManager.shared.start { [weak self] in
+            guard let self else { return }
+            self.configStore.isEnabled.toggle()
+        }
+
+        // Sync the status-bar icon with the master enable switch (also sets initial state)
+        configStore.$isEnabled
+            .receive(on: RunLoop.main)
+            .sink { [weak self] enabled in
+                self?.updateStatusBarIcon(enabled: enabled)
+            }
+            .store(in: &cancellables)
+
         PermissionManager.shared.checkAll()
         if !PermissionManager.shared.hasAccessibility {
             _ = PermissionManager.shared.checkAccessibility(prompt: true)
@@ -70,6 +86,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    private func updateStatusBarIcon(enabled: Bool) {
+        guard let button = statusItem?.button else { return }
+        let symbolName = enabled ? "magicmouse.fill" : "magicmouse"
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "MagicTouch")
+        button.appearsDisabled = !enabled
     }
 
     // MARK: - MultitouchManagerDelegate
@@ -122,6 +145,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MultitouchManagerDeleg
     }
 
     func multitouchManagerDidStartDrag() {
+        // Master switch off: no gesture should trigger a drag.
+        guard configStore.isEnabled else { return }
         // If the user has a custom action mapped to holdToDrag, that gets triggered in didDetect;
         // otherwise, startLeftDrag natively initiates macOS left click drag.
         if configStore.actionForGesture(.holdToDrag) == nil {

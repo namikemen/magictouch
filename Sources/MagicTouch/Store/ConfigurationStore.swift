@@ -2,9 +2,25 @@ import Foundation
 import Combine
 import SwiftUI
 
+/// Posted by ConfigurationStore whenever the master-toggle hotkey configuration changes,
+/// so the hotkey manager can re-register the system-wide shortcut.
+public extension Notification.Name {
+    static let magicTouchToggleHotkeyChanged = Notification.Name("MagicTouchToggleHotkeyChanged")
+}
+
 /// Manages loading, saving, and updating user gesture configurations
 public final class ConfigurationStore: ObservableObject {
     public static let shared = ConfigurationStore()
+
+    // MARK: Master-toggle hotkey configuration
+
+    public static let defaultToggleHotkeyModifiers: [KeyModifier] = [.control, .option]
+    public static let defaultToggleHotkeyKeyCode: UInt16 = 46 // 'M'
+    public static let defaultToggleHotkeyDescription: String = "⌃ + ⌥ + M"
+
+    private static let hotkeyModifiersKey = "MagicTouch_ToggleHotkeyModifiers"
+    private static let hotkeyKeyCodeKey = "MagicTouch_ToggleHotkeyKeyCode"
+    private static let hotkeyDescriptionKey = "MagicTouch_ToggleHotkeyDescription"
 
     @Published public var mappings: [GestureMapping] = []
     @Published public var isEnabled: Bool {
@@ -16,6 +32,48 @@ public final class ConfigurationStore: ObservableObject {
         didSet {
             UserDefaults.standard.set(touchAreaMinY, forKey: "MagicTouch_TouchAreaMinY")
         }
+    }
+    @Published public var toggleHotkeyModifiers: [KeyModifier] = ConfigurationStore.defaultToggleHotkeyModifiers {
+        didSet {
+            UserDefaults.standard.set(toggleHotkeyModifiers.map(\.rawValue), forKey: ConfigurationStore.hotkeyModifiersKey)
+        }
+    }
+    @Published public var toggleHotkeyKeyCode: UInt16 = ConfigurationStore.defaultToggleHotkeyKeyCode {
+        didSet {
+            UserDefaults.standard.set(Int(toggleHotkeyKeyCode), forKey: ConfigurationStore.hotkeyKeyCodeKey)
+        }
+    }
+    @Published public var toggleHotkeyDescription: String = ConfigurationStore.defaultToggleHotkeyDescription {
+        didSet {
+            UserDefaults.standard.set(toggleHotkeyDescription, forKey: ConfigurationStore.hotkeyDescriptionKey)
+        }
+    }
+
+    /// Whether the master-toggle shortcut is configured (a key code and at least one modifier).
+    public var hasToggleHotkey: Bool {
+        toggleHotkeyKeyCode != 0 && !toggleHotkeyModifiers.isEmpty
+    }
+
+    /// Human-readable label for the master-toggle shortcut, or "None" when disabled.
+    public var toggleHotkeyDisplay: String {
+        hasToggleHotkey ? toggleHotkeyDescription : "None"
+    }
+
+    /// Updates the master-toggle shortcut, persists it, and notifies the hotkey manager to re-register.
+    public func setToggleHotkey(modifiers: [KeyModifier], keyCode: UInt16, description: String) {
+        toggleHotkeyModifiers = modifiers
+        toggleHotkeyKeyCode = keyCode
+        toggleHotkeyDescription = description
+        NotificationCenter.default.post(name: .magicTouchToggleHotkeyChanged, object: nil)
+    }
+
+    /// Restores the default master-toggle shortcut and notifies the hotkey manager.
+    public func resetToggleHotkey() {
+        setToggleHotkey(
+            modifiers: ConfigurationStore.defaultToggleHotkeyModifiers,
+            keyCode: ConfigurationStore.defaultToggleHotkeyKeyCode,
+            description: ConfigurationStore.defaultToggleHotkeyDescription
+        )
     }
 
     private let saveURL: URL
@@ -33,6 +91,18 @@ public final class ConfigurationStore: ObservableObject {
             self.saveURL = appDir.appendingPathComponent("gestures.json")
             self.isEnabled = UserDefaults.standard.object(forKey: "MagicTouch_IsEnabled") as? Bool ?? true
             self.touchAreaMinY = UserDefaults.standard.object(forKey: "MagicTouch_TouchAreaMinY") as? Double ?? 0.0
+
+            // Master-toggle hotkey: the @Published initializers already hold the defaults,
+            // so only override values that were persisted by a previous session.
+            if let storedModifiers = UserDefaults.standard.stringArray(forKey: ConfigurationStore.hotkeyModifiersKey) {
+                self.toggleHotkeyModifiers = storedModifiers.compactMap { KeyModifier(rawValue: $0) }
+            }
+            if let storedKeyCode = UserDefaults.standard.object(forKey: ConfigurationStore.hotkeyKeyCodeKey) as? Int {
+                self.toggleHotkeyKeyCode = UInt16(clamping: storedKeyCode)
+            }
+            if let storedDescription = UserDefaults.standard.string(forKey: ConfigurationStore.hotkeyDescriptionKey) {
+                self.toggleHotkeyDescription = storedDescription
+            }
         }
 
         load()
